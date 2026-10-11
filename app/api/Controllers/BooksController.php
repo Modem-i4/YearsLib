@@ -8,6 +8,11 @@ class BooksController
 
     public function index(): array
     {
+        $category = $_GET['category'] ?? null;
+        if ($category !== null && !in_array($category, ['textbook', 'literature'], true)) {
+            throw new ApiException('category must be textbook or literature', 400);
+        }
+
         $grade = $_GET['grade'] ?? null;
         if ($grade !== null && $grade !== '') {
             $grade = filter_var($grade, FILTER_VALIDATE_INT);
@@ -15,26 +20,49 @@ class BooksController
                 throw new ApiException('grade must be an integer from 1 to 11', 400);
             }
 
-            $statement = $this->pdo->prepare(
-                'SELECT id, title, author, cover_path, grade, pdf_url, created_at, updated_at
-                 FROM books WHERE grade = :grade ORDER BY title, id'
-            );
-            $statement->execute(['grade' => $grade]);
-        } else {
-            $statement = $this->pdo->query(
-                'SELECT id, title, author, cover_path, grade, pdf_url, created_at, updated_at
-                 FROM books ORDER BY grade IS NULL, grade, title, id'
-            );
         }
 
-        return ['data' => $statement->fetchAll()];
+        $conditions = [];
+        $parameters = [];
+        if ($category !== null) {
+            $conditions[] = 'category = :category';
+            $parameters['category'] = $category;
+        }
+        if ($grade !== null && $grade !== '') {
+            $conditions[] = 'grade = :grade';
+            $parameters['grade'] = $grade;
+        }
+
+        $sql = 'SELECT id, title, year, category, author, cover_path, grade, pdf_url, created_at, updated_at
+                FROM books';
+        if ($conditions !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $conditions);
+        }
+        $sql .= ' ORDER BY grade IS NULL, grade, title, id';
+
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($parameters);
+
+        $books = $statement->fetchAll();
+        $grades = [];
+
+        if ($category === 'textbook') {
+            $gradeStatement = $this->pdo->query(
+                "SELECT DISTINCT grade FROM books
+                 WHERE category = 'textbook' AND grade IS NOT NULL
+                 ORDER BY grade"
+            );
+            $grades = array_map('intval', $gradeStatement->fetchAll(PDO::FETCH_COLUMN));
+        }
+
+        return ['data' => $books, 'grades' => $grades];
     }
 
     public function show(string $id): array
     {
         $bookId = $this->parseId($id);
         $statement = $this->pdo->prepare(
-            'SELECT id, title, author, cover_path, grade, pdf_url, created_at, updated_at
+            'SELECT id, title, year, category, author, cover_path, grade, pdf_url, created_at, updated_at
              FROM books WHERE id = :id'
         );
         $statement->execute(['id' => $bookId]);
@@ -52,8 +80,8 @@ class BooksController
         $this->authorizeWrite();
         $book = $this->validatedInput();
         $statement = $this->pdo->prepare(
-            'INSERT INTO books (title, author, cover_path, grade, pdf_url)
-             VALUES (:title, :author, :cover_path, :grade, :pdf_url)'
+            'INSERT INTO books (title, year, category, author, cover_path, grade, pdf_url)
+             VALUES (:title, :year, :category, :author, :cover_path, :grade, :pdf_url)'
         );
         $statement->execute($book);
 
@@ -69,7 +97,7 @@ class BooksController
 
         $statement = $this->pdo->prepare(
             'UPDATE books
-             SET title = :title, author = :author, cover_path = :cover_path,
+             SET title = :title, year = :year, category = :category, author = :author, cover_path = :cover_path,
                  grade = :grade, pdf_url = :pdf_url
              WHERE id = :id'
         );
@@ -92,6 +120,19 @@ class BooksController
         $input = (array)$decoded;
 
         $title = $this->requiredText($input, 'title', 190);
+        $category = $input['category'] ?? null;
+        if (!is_string($category) || !in_array($category, ['textbook', 'literature'], true)) {
+            throw new ApiException('category must be textbook or literature', 400);
+        }
+        $year = $input['year'] ?? null;
+        if ($year !== null && $year !== '') {
+            $year = filter_var($year, FILTER_VALIDATE_INT);
+            if ($year === false || $year < 1000 || $year > 9999) {
+                throw new ApiException('year must be an integer from 1000 to 9999 or null', 400);
+            }
+        } else {
+            $year = null;
+        }
         $author = $this->optionalText($input, 'author', 190);
         $grade = $input['grade'] ?? null;
         if ($grade !== null && $grade !== '') {
@@ -125,6 +166,8 @@ class BooksController
 
         return [
             'title' => $title,
+            'year' => $year,
+            'category' => $category,
             'author' => $author,
             'cover_path' => $coverPath,
             'grade' => $grade,
