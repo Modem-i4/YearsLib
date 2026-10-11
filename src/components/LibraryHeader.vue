@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import ThemeToggle from './ThemeToggle.vue'
 
 defineProps({
@@ -7,6 +8,21 @@ defineProps({
 })
 
 const logoUrl = '/assets/yearslib-logo.svg'
+const isAdminAuthenticated = ref(false)
+
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/admin/session', {
+      headers: { Accept: 'application/json' },
+    })
+    if (!response.ok) return
+
+    const payload = await response.json()
+    isAdminAuthenticated.value = payload.authenticated === true
+  } catch {
+    // The public navigation remains usable if the session check is unavailable.
+  }
+})
 </script>
 
 <template>
@@ -28,7 +44,10 @@ const logoUrl = '/assets/yearslib-logo.svg'
           :href="isViewer ? '/#literature' : '#literature'"
         >Література</a>
       </nav>
-      <ThemeToggle />
+      <div class="library-header-actions">
+        <a v-if="isAdminAuthenticated" class="admin-catalog-link" href="/admin">До кабінету</a>
+        <ThemeToggle />
+      </div>
     </div>
   </header>
 </template>

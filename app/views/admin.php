@@ -3,14 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= htmlspecialchars($title ?? 'Адміністрування', ENT_QUOTES, 'UTF-8') ?></title>
+  <meta name="theme-color" content="#f7f9fd">
+  <link rel="icon" type="image/svg+xml" href="/assets/yearslib-logo.svg">
+  <title>Адмінпанель – Бібліотека Years</title>
+  <script>
+    try {
+      const theme = localStorage.getItem('library.theme');
+      if (theme === 'dark' || theme === 'light') {
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]')?.setAttribute(
+          'content', theme === 'dark' ? '#020113' : '#f7f9fd'
+        );
+      }
+    } catch {}
+  </script>
   <link rel="stylesheet" href="/build/assets/library.css">
+  <script type="module" src="/build/assets/library.js"></script>
 </head>
-<body class="min-h-dvh bg-stone-50 p-8 text-stone-900">
-  <main class="mx-auto max-w-3xl">
-    <h1 class="font-serif text-3xl font-semibold">Адміністрування бібліотеки</h1>
-    <p class="mt-3 text-stone-600">Каркас адміністративної сторінки.</p>
-    <a class="mt-6 inline-block text-emerald-800 underline" href="/">До каталогу</a>
-  </main>
+<body>
+  <div id="library-app"></div>
 </body>
 </html>

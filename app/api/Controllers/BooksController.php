@@ -217,13 +217,7 @@ class BooksController
 
     private function authorizeWrite(): void
     {
-        $configuredKey = getenv('ADMIN_API_KEY');
-        if ($configuredKey === false || $configuredKey === '') {
-            throw new ApiException('Book editing is not configured', 503);
-        }
-
-        $providedKey = $_SERVER['HTTP_X_ADMIN_KEY'] ?? '';
-        if (!is_string($providedKey) || !hash_equals($configuredKey, $providedKey)) {
+        if (empty($_SESSION['admin_authenticated'])) {
             throw new ApiException('Unauthorized', 401);
         }
     }
