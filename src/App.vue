@@ -5,10 +5,10 @@
         Шкільна бібліотека
       </p>
       <h1 class="mt-3 font-serif text-4xl font-semibold sm:text-5xl">
-        Бібліотека підручників
+        Шкільна бібліотека
       </h1>
       <p class="mt-4 max-w-xl text-base leading-7 text-stone-600">
-        Каталог підручників з’явиться на цьому місці.
+        Каталог книг з’явиться на цьому місці.
       </p>
     </section>
   </main>
