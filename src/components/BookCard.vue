@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { coverPalette, externalPdfUrl } from '../utils/bookPresentation.js'
+import { coverPalette, externalPdfUrl, usesEmbeddedViewer } from '../utils/bookPresentation.js'
 
 const props = defineProps({
   book: { type: Object, required: true },
@@ -8,6 +8,7 @@ const props = defineProps({
 
 const coverFailed = ref(false)
 const pdfUrl = externalPdfUrl(props.book.pdf_url)
+const embeddedViewer = usesEmbeddedViewer(props.book.pdf_url)
 </script>
 
 <template>
@@ -15,10 +16,10 @@ const pdfUrl = externalPdfUrl(props.book.pdf_url)
     <a
       v-if="pdfUrl"
       class="book-cover-link"
-      :href="pdfUrl"
-      target="_blank"
-      rel="noopener noreferrer"
-      :aria-label="`Відкрити книгу «${book.title}» у новій вкладці`"
+      :href="embeddedViewer ? `/book/${book.id}` : pdfUrl"
+      :target="embeddedViewer ? undefined : '_blank'"
+      :rel="embeddedViewer ? undefined : 'noopener noreferrer'"
+      :aria-label="embeddedViewer ? `Переглянути книгу «${book.title}»` : `Відкрити книгу «${book.title}» у новій вкладці`"
     >
       <div class="book-cover" :class="`cover-${coverPalette(book)}`">
         <img

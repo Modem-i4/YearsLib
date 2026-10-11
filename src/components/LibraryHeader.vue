@@ -3,6 +3,7 @@ import ThemeToggle from './ThemeToggle.vue'
 
 defineProps({
   collection: { type: String, required: true },
+  isViewer: { type: Boolean, default: false },
 })
 
 const logoUrl = '/assets/yearslib-logo.svg'
@@ -16,8 +17,16 @@ const logoUrl = '/assets/yearslib-logo.svg'
         <span>Бібліотека Years</span>
       </a>
       <nav class="primary-nav" aria-label="Основна навігація">
-        <a class="nav-link" :class="{ 'is-current': collection === 'textbook' }" href="#textbooks">Підручники</a>
-        <a class="nav-link" :class="{ 'is-current': collection === 'literature' }" href="#literature">Література</a>
+        <a
+          class="nav-link"
+          :class="{ 'is-current': collection === 'textbook' }"
+          :href="isViewer ? '/#textbooks' : '#textbooks'"
+        >Підручники</a>
+        <a
+          class="nav-link"
+          :class="{ 'is-current': collection === 'literature' }"
+          :href="isViewer ? '/#literature' : '#literature'"
+        >Література</a>
       </nav>
       <ThemeToggle />
     </div>
