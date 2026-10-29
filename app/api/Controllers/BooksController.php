@@ -49,6 +49,7 @@ class BooksController
         $statement->execute($parameters);
 
         $books = $statement->fetchAll();
+        $this->attachTags($books);
         if (empty($_SESSION['admin_authenticated'])) {
             foreach ($books as &$publicBook) {
                 unset($publicBook['active_loans_count']);
@@ -87,6 +88,9 @@ class BooksController
         if ($book === false) {
             throw new ApiException('Book not found', 404);
         }
+        $books = [$book];
+        $this->attachTags($books);
+        $book = $books[0];
         if (empty($_SESSION['admin_authenticated'])) {
             unset($book['active_loans_count']);
         }
@@ -98,13 +102,23 @@ class BooksController
     {
         $this->authorizeWrite();
         $book = $this->validatedInput();
-        $statement = $this->pdo->prepare(
-            'INSERT INTO books (title, year, category, author, cover_path, grade, pdf_url, total_copies)
-             VALUES (:title, :year, :category, :author, :cover_path, :grade, :pdf_url, :total_copies)'
-        );
-        $statement->execute($book);
-
-        return $this->show((string)$this->pdo->lastInsertId());
+        $tagIds = $book['tag_ids'];
+        unset($book['tag_ids']);
+        $this->pdo->beginTransaction();
+        try {
+            $statement = $this->pdo->prepare(
+                'INSERT INTO books (title, year, category, author, cover_path, grade, pdf_url, total_copies)
+                 VALUES (:title, :year, :category, :author, :cover_path, :grade, :pdf_url, :total_copies)'
+            );
+            $statement->execute($book);
+            $id = (int)$this->pdo->lastInsertId();
+            $this->syncTags($id, $tagIds);
+            $this->pdo->commit();
+            return $this->show((string)$id);
+        } catch (Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
     }
 
     public function update(string $id): array
@@ -112,6 +126,8 @@ class BooksController
         $this->authorizeWrite();
         $bookId = $this->parseId($id);
         $book = $this->validatedInput();
+        $tagIds = $book['tag_ids'];
+        unset($book['tag_ids']);
         $book['id'] = $bookId;
 
         $activeStatement = $this->pdo->prepare('SELECT COALESCE(SUM(quantity - returned_quantity), 0) FROM book_loans WHERE book_id = :id');
@@ -127,7 +143,15 @@ class BooksController
                  grade = :grade, pdf_url = :pdf_url, total_copies = :total_copies
              WHERE id = :id'
         );
-        $statement->execute($book);
+        $this->pdo->beginTransaction();
+        try {
+            $statement->execute($book);
+            $this->syncTags($bookId, $tagIds);
+            $this->pdo->commit();
+        } catch (Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
 
         return $this->show((string)$bookId);
     }
@@ -195,6 +219,17 @@ class BooksController
         if ($totalCopies === false || $totalCopies < 0 || $totalCopies > 65535) {
             throw new ApiException('total_copies must be an integer from 0 to 65535', 400);
         }
+        $tagIds = [];
+        if ($category === 'literature') {
+            $rawTagIds = $input['tag_ids'] ?? [];
+            if (!is_array($rawTagIds)) throw new ApiException('tag_ids must be an array', 400);
+            foreach ($rawTagIds as $tagId) {
+                $parsedTagId = filter_var($tagId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                if ($parsedTagId === false) throw new ApiException('tag_ids must contain positive integers', 400);
+                $tagIds[] = (int)$parsedTagId;
+            }
+            $tagIds = array_values(array_unique($tagIds));
+        }
         return [
             'title' => $title,
             'year' => $year,
@@ -204,7 +239,41 @@ class BooksController
             'grade' => $grade,
             'pdf_url' => $pdfUrl,
             'total_copies' => $totalCopies,
+            'tag_ids' => $tagIds,
         ];
+    }
+
+    private function attachTags(array &$books): void
+    {
+        if ($books === []) return;
+        $ids = array_map(static fn (array $book): int => (int)$book['id'], $books);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $statement = $this->pdo->prepare(
+            "SELECT bt.book_id, t.id, t.name, t.color FROM book_tags bt JOIN tags t ON t.id = bt.tag_id
+             WHERE bt.book_id IN ({$placeholders}) ORDER BY t.name, t.id"
+        );
+        $statement->execute($ids);
+        $tagsByBook = [];
+        foreach ($statement->fetchAll() as $tag) {
+            $tagsByBook[(int)$tag['book_id']][] = ['id' => (int)$tag['id'], 'name' => $tag['name'], 'color' => $tag['color']];
+        }
+        foreach ($books as &$book) $book['tags'] = $tagsByBook[(int)$book['id']] ?? [];
+        unset($book);
+    }
+
+    private function syncTags(int $bookId, array $tagIds): void
+    {
+        if ($tagIds !== []) {
+            $placeholders = implode(',', array_fill(0, count($tagIds), '?'));
+            $statement = $this->pdo->prepare("SELECT COUNT(*) FROM tags WHERE id IN ({$placeholders})");
+            $statement->execute($tagIds);
+            if ((int)$statement->fetchColumn() !== count($tagIds)) throw new ApiException('Один або кілька тегів не знайдено', 400);
+        }
+        $delete = $this->pdo->prepare('DELETE FROM book_tags WHERE book_id = :book_id');
+        $delete->execute(['book_id' => $bookId]);
+        if ($tagIds === []) return;
+        $insert = $this->pdo->prepare('INSERT INTO book_tags (book_id, tag_id) VALUES (:book_id, :tag_id)');
+        foreach ($tagIds as $tagId) $insert->execute(['book_id' => $bookId, 'tag_id' => $tagId]);
     }
 
     private function requiredText(array $input, string $field, int $maxLength): string

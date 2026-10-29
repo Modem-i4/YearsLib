@@ -99,3 +99,28 @@ ALTER TABLE book_loans
     ADD CONSTRAINT chk_book_loans_returned_quantity CHECK (returned_quantity <= quantity);
 
 UPDATE book_loans SET returned_quantity = quantity WHERE returned_at IS NOT NULL;
+
+-- ------------- MIGRATION 5 -------------- --
+
+CREATE TABLE IF NOT EXISTS tags (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name VARCHAR(80) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_tags_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS book_tags (
+    book_id BIGINT UNSIGNED NOT NULL,
+    tag_id BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (book_id, tag_id),
+    KEY idx_book_tags_tag (tag_id),
+    CONSTRAINT fk_book_tags_book FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+    CONSTRAINT fk_book_tags_tag FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------- MIGRATION 6 -------------- --
+
+ALTER TABLE tags
+    ADD COLUMN color VARCHAR(20) NOT NULL DEFAULT 'blue' AFTER name;

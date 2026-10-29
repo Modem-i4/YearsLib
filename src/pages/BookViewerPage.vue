@@ -83,6 +83,7 @@ onMounted(async () => {
             <p class="viewer-author">
               {{ book.author || 'Автор не вказаний' }}<span v-if="book.grade"> · {{ book.grade }} клас</span>
             </p>
+            <div v-if="book.tags?.length" class="viewer-tags"><span v-for="tag in book.tags" :key="tag.id" class="book-tag" :class="`tag-color-${tag.color || 'blue'}`">{{ tag.name }}</span></div>
           </div>
           <div class="viewer-heading-actions">
             <button v-if="isAdmin" class="viewer-edit viewer-edit-desktop" type="button" aria-label="Редагувати книгу" title="Редагувати книгу" @click="bookEditorOpen = true">

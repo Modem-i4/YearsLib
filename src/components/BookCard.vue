@@ -85,6 +85,7 @@ const embeddedViewer = usesEmbeddedViewer(props.book.pdf_url)
         <p>{{ book.author || 'Автор не вказаний' }}</p>
         <span v-if="book.grade" class="book-grade">{{ book.grade }} клас</span>
       </div>
+      <div v-if="book.tags?.length" class="book-tags"><span v-for="tag in book.tags" :key="tag.id" class="book-tag" :class="`tag-color-${tag.color || 'blue'}`">{{ tag.name }}</span></div>
       <span class="book-format" :class="{ 'has-pdf': pdfUrl }">
         {{ pdfUrl ? 'PDF' : 'Книга' }}
       </span>

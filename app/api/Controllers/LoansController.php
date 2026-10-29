@@ -166,6 +166,11 @@ class LoansController
         $statement->execute(['id' => $this->parseId($id, 'Book')]);
         $book = $statement->fetch();
         if ($book === false) throw new ApiException('Книгу не знайдено', 404);
+        $tags = $this->pdo->prepare(
+            'SELECT t.id, t.name, t.color FROM book_tags bt JOIN tags t ON t.id = bt.tag_id WHERE bt.book_id = :id ORDER BY t.name, t.id'
+        );
+        $tags->execute(['id' => $book['id']]);
+        $book['tags'] = array_map(static fn (array $tag): array => ['id' => (int)$tag['id'], 'name' => $tag['name'], 'color' => $tag['color']], $tags->fetchAll());
         return $book;
     }
 

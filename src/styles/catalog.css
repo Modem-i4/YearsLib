@@ -300,6 +300,7 @@ input:focus-visible {
   color: var(--text-muted);
   font-size: 13px;
 }
+.viewer-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 7px; }
 
 .viewer-external {
   display: inline-flex;
@@ -794,6 +795,18 @@ input:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.book-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.book-tag { display: inline-flex; min-height: 20px; align-items: center; padding: 2px 7px; border: 1px solid color-mix(in srgb, var(--tag-bg) 70%, var(--line)); border-radius: 999px; color: var(--tag-text); background: var(--tag-bg); font-size: 10px; font-weight: 650; line-height: 1.2; }
+.tag-color-blue { --tag-bg: #1d62b0; --tag-text: #fff; }
+.tag-color-coral { --tag-bg: #ff6543; --tag-text: #171c2b; }
+.tag-color-yellow { --tag-bg: #ffdb2a; --tag-text: #171c2b; }
+.tag-color-green { --tag-bg: #46a67f; --tag-text: #10231b; }
+.tag-color-violet { --tag-bg: #8b6ad9; --tag-text: #fff; }
+.tag-color-pink { --tag-bg: #e56b9f; --tag-text: #29111c; }
+.tag-color-teal { --tag-bg: #2aa8a1; --tag-text: #102322; }
+.tag-color-orange { --tag-bg: #f09a3e; --tag-text: #27190b; }
+.tag-color-slate { --tag-bg: #64748b; --tag-text: #fff; }
+.tag-color-brown { --tag-bg: #9a6b45; --tag-text: #fff; }
 
 .book-grade {
   flex: 0 0 auto;
@@ -1110,6 +1123,34 @@ input:focus-visible {
 .admin-field > label b { color: var(--accent); }
 .admin-field input,
 .admin-field select { width: 100%; padding: 0 10px; }
+.tag-field { position: relative; }
+.tag-select-trigger { display: flex; width: 100%; min-height: 42px; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--text-strong); background: var(--surface); cursor: pointer; text-align: left; }
+.tag-select-trigger > svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: var(--text-muted); stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.tag-selected-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag-select-placeholder { color: var(--text-soft); font-size: 13px; font-weight: 400; }
+.tag-dropdown { position: absolute; z-index: 5; display: grid; overflow-y: auto; width: 100%; max-height: 300px; top: calc(100% + 4px); left: 0; padding: 5px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); box-shadow: 0 10px 28px rgb(10 18 35 / 22%); }
+.tag-add-button { display: flex; min-height: 36px; align-items: center; gap: 8px; padding: 0 9px; border: 0; border-radius: 4px; color: var(--accent); background: transparent; cursor: pointer; font-size: 12px; font-weight: 700; text-align: left; }
+.tag-add-button:hover { background: var(--surface-subtle); }
+.tag-add-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 2; }
+.tag-option-row { display: flex; min-width: 0; align-items: center; gap: 5px; border-top: 1px solid color-mix(in srgb, var(--line) 65%, transparent); }
+.tag-option { display: flex; min-width: 0; min-height: 38px; flex: 1; align-items: center; gap: 8px; padding: 5px 7px; color: var(--text-strong); cursor: pointer; font-size: 13px; font-weight: 500; }
+.tag-option input { width: 16px; min-height: 16px; flex: 0 0 auto; padding: 0; accent-color: var(--accent); }
+.tag-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag-color-dot { width: 16px; height: 16px; flex: 0 0 auto; padding: 0; border: 1px solid color-mix(in srgb, var(--tag-bg) 70%, var(--line)); border-radius: 50%; background: var(--tag-bg); cursor: pointer; }
+.tag-color-dot:hover { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--tag-bg); }
+.tag-row-action { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; padding: 0; border: 0; border-radius: 4px; color: var(--text-muted); background: transparent; cursor: pointer; }
+.tag-row-action:hover { color: var(--accent-hover); background: var(--surface-subtle); }
+.tag-row-action.danger { color: #d75949; }
+.tag-row-action svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.tag-edit-row { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) 32px 32px; align-items: center; gap: 5px; padding: 5px 3px; }
+.tag-edit-row input { min-width: 0; min-height: 34px; }
+.tag-edit-row button { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid var(--line); border-radius: 4px; color: var(--text-strong); background: var(--surface); cursor: pointer; font-size: 17px; }
+.tag-edit-row button:hover { border-color: var(--accent); color: var(--accent-hover); }
+.tag-color-options { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(10, 24px); gap: 5px; padding: 3px 1px 2px; }
+.tag-edit-row .tag-color-swatch { width: 24px; height: 24px; border: 2px solid transparent; border-radius: 50%; background: var(--tag-bg); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 24%); }
+.tag-edit-row .tag-color-swatch:hover { border-color: color-mix(in srgb, var(--tag-bg) 65%, #fff); }
+.tag-edit-row .tag-color-swatch.active { border-color: var(--text-strong); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--text-strong); }
+.tag-empty { margin: 8px; color: var(--text-soft); font-size: 12px; font-weight: 400; }
 .borrower-combobox { position: relative; display: block; min-width: 0; }
 .borrower-combobox > input { display: block; }
 .borrower-suggestions {
