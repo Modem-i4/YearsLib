@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useBookCatalog } from '../composables/useBookCatalog.js'
 import BookCard from '../components/BookCard.vue'
+import BookEditorModal from '../components/BookEditorModal.vue'
 import CatalogSearch from '../components/CatalogSearch.vue'
 import CatalogState from '../components/CatalogState.vue'
 import GradeSelector from '../components/GradeSelector.vue'
@@ -20,6 +21,25 @@ const {
 } = useBookCatalog()
 
 const isAdmin = ref(false)
+const editorOpen = ref(false)
+const editingBook = ref(null)
+
+function openCreate() {
+  editingBook.value = null
+  editorOpen.value = true
+}
+
+function openEdit(book) {
+  editingBook.value = book
+  editorOpen.value = true
+}
+
+async function bookSaved() {
+  editorOpen.value = false
+  editingBook.value = null
+  await loadBooks(selectedCollection.value, selectedCollection.value === 'textbook' ? selectedGrade.value : null)
+}
+
 onMounted(async () => {
   try {
     const response = await fetch('/api/admin/session', { headers: { Accept: 'application/json' } })
@@ -43,7 +63,13 @@ onMounted(async () => {
           <h1 id="catalog-title">{{ selectedCollection === 'textbook' ? 'Підручники' : 'Література' }}</h1>
           <p>{{ selectedCollection === 'textbook' ? 'Навчальні видання за класами.' : 'Книги для читання та знайомства з новими історіями.' }}</p>
         </div>
-        <span v-if="selectedCollection === 'textbook' && selectedGrade" class="current-grade">{{ selectedGrade }} клас</span>
+        <div class="catalog-heading-actions">
+          <span v-if="selectedCollection === 'textbook' && selectedGrade" class="current-grade">{{ selectedGrade }} клас</span>
+          <button v-if="isAdmin" class="admin-primary-button" type="button" @click="openCreate">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Додати книгу</span>
+          </button>
+        </div>
       </div>
 
       <section class="catalog-controls" :aria-label="`Фільтри: ${selectedCollection === 'textbook' ? 'підручники' : 'література'}`">
@@ -80,8 +106,17 @@ onMounted(async () => {
         :message="search ? 'Змініть пошуковий запит.' : `У розділі «${selectedCollection === 'textbook' ? 'Підручники' : 'Література'}» поки немає записів.`"
       />
       <section v-else class="book-grid" :aria-label="selectedCollection === 'textbook' ? `Підручники для ${selectedGrade} класу` : 'Література'">
-        <BookCard v-for="book in visibleBooks" :key="book.id" :book="book" :can-manage="isAdmin" />
+        <BookCard v-for="book in visibleBooks" :key="book.id" :book="book" :can-manage="isAdmin" @edit="openEdit" />
       </section>
     </section>
+
+    <BookEditorModal
+      v-if="editorOpen"
+      :book="editingBook"
+      :default-category="selectedCollection"
+      :default-grade="selectedGrade"
+      @close="editorOpen = false"
+      @saved="bookSaved"
+    />
   </main>
 </template>

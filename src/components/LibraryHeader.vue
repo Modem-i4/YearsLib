@@ -10,6 +10,19 @@ defineProps({
 const logoUrl = '/assets/yearslib-logo.svg'
 const isAdminAuthenticated = ref(false)
 
+async function logout() {
+  try {
+    await fetch('/api/admin/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+  } finally {
+    window.location.reload()
+  }
+}
+
 onMounted(async () => {
   try {
     const response = await fetch('/api/admin/session', {
@@ -45,7 +58,9 @@ onMounted(async () => {
         >Література</a>
       </nav>
       <div class="library-header-actions">
-        <a v-if="isAdminAuthenticated" class="admin-catalog-link" href="/admin">До кабінету</a>
+        <button v-if="isAdminAuthenticated" class="header-logout" type="button" aria-label="Вийти" title="Вийти" @click="logout">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/></svg>
+        </button>
         <ThemeToggle />
       </div>
     </div>

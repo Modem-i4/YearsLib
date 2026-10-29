@@ -34,9 +34,9 @@ npm run build
 - `PUT /api/books/{id}` повністю оновлює запис після входу адміністратора.
 - `POST /api/admin/login`, `GET /api/admin/session`, `POST /api/admin/logout` керують адмін-сесією.
 - `POST /api/admin/covers` приймає перевірену WebP-обкладинку для поточної адмін-сесії.
-- `GET /api/admin/books/{id}/loans` повертає статистику та історію видач літератури.
-- `POST /api/admin/books/{id}/loans` реєструє нову видачу; `PUT /api/admin/loans/{id}` редагує її.
-- `POST /api/admin/loans/{id}/return` позначає книгу поверненою. Історія видач не видаляється.
+- `GET /api/admin/books/{id}/loans` повертає статистику та історію видач книги.
+- `POST /api/admin/books/{id}/loans` реєструє видачу одного чи кількох примірників; `PUT /api/admin/loans/{id}` редагує її.
+- `POST /api/admin/loans/{id}/return` реєструє повне або часткове повернення. Історія видач не видаляється.
 
 Для `POST` і `PUT` передавайте обов'язкові `title` і `category` (`textbook` або `literature`),
 а за потреби `author`, `grade`, `pdf_url`, `cover_path` і `total_copies`. Інші поля можуть бути відсутніми або

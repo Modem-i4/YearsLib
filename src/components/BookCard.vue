@@ -1,47 +1,50 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { coverPalette, externalPdfUrl, usesEmbeddedViewer } from '../utils/bookPresentation.js'
 
 const props = defineProps({
   book: { type: Object, required: true },
   canManage: { type: Boolean, default: false },
 })
+const emit = defineEmits(['edit'])
 
 const coverFailed = ref(false)
 const pdfUrl = externalPdfUrl(props.book.pdf_url)
 const embeddedViewer = usesEmbeddedViewer(props.book.pdf_url)
-const managesLoans = computed(() => props.canManage && props.book.category === 'literature')
-
-function openLoanAccounting(event) {
-  if (!managesLoans.value || event.target.closest('a')) return
-  window.location.href = `/admin/literature/${props.book.id}`
-}
-
-function openLoanAccountingFromKeyboard(event) {
-  if (!managesLoans.value) return
-  event.preventDefault()
-  window.location.href = `/admin/literature/${props.book.id}`
-}
 </script>
 
 <template>
   <article
     class="book-card"
-    :class="{ 'is-manageable': managesLoans }"
-    :role="managesLoans ? 'link' : undefined"
-    :tabindex="managesLoans ? 0 : undefined"
-    :aria-label="managesLoans ? `Відкрити облік видачі книги «${book.title}»` : undefined"
-    @click="openLoanAccounting"
-    @keydown.enter="openLoanAccountingFromKeyboard"
-    @keydown.space="openLoanAccountingFromKeyboard"
   >
+    <button
+      v-if="canManage"
+      class="book-admin-edit"
+      type="button"
+      :aria-label="`Редагувати ${book.title}`"
+      title="Редагувати"
+      @click.stop="emit('edit', book)"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="pencil-shape" d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+      </svg>
+    </button>
     <a
-      v-if="pdfUrl || managesLoans"
+      v-if="canManage"
+      class="book-admin-loan"
+      :href="`/admin/books/${book.id}`"
+      :aria-label="`Видати ${book.title}`"
+      title="Видати"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a2 2 0 0 1 4 0v3M11 10V5a2 2 0 0 1 4 0v5M15 10V7a2 2 0 0 1 4 0v7c0 4-2.7 7-7 7h-1.2a6 6 0 0 1-5.3-3.2L3.2 13.5a2 2 0 0 1 3.5-1.9L8 14"/></svg>
+    </a>
+    <a
+      v-if="pdfUrl"
       class="book-cover-link"
-      :href="managesLoans ? `/admin/literature/${book.id}` : (embeddedViewer ? `/book/${book.id}` : pdfUrl)"
-      :target="!managesLoans && !embeddedViewer ? '_blank' : undefined"
-      :rel="!managesLoans && !embeddedViewer ? 'noopener noreferrer' : undefined"
-      :aria-label="managesLoans ? `Відкрити облік видачі книги «${book.title}»` : (embeddedViewer ? `Переглянути книгу «${book.title}»` : `Відкрити книгу «${book.title}» у новій вкладці`)"
+      :href="embeddedViewer ? `/book/${book.id}` : pdfUrl"
+      :target="!embeddedViewer ? '_blank' : undefined"
+      :rel="!embeddedViewer ? 'noopener noreferrer' : undefined"
+      :aria-label="embeddedViewer ? `Переглянути книгу «${book.title}»` : `Відкрити книгу «${book.title}» у новій вкладці`"
     >
       <div class="book-cover" :class="`cover-${coverPalette(book)}`">
         <img
@@ -73,7 +76,7 @@ function openLoanAccountingFromKeyboard(event) {
         <strong>{{ book.title }}</strong>
         <span class="cover-author">{{ book.author || 'Автор не вказаний' }}</span>
       </div>
-      <span class="cover-unavailable-label">PDF не додано</span>
+      <span v-if="book.category === 'textbook'" class="cover-unavailable-label">PDF не додано</span>
     </div>
 
     <div class="book-meta">
@@ -86,7 +89,7 @@ function openLoanAccountingFromKeyboard(event) {
         {{ pdfUrl ? 'PDF' : 'Книга' }}
       </span>
       <span
-        v-if="book.category === 'literature'"
+        v-if="book.category === 'literature' || canManage"
         class="book-availability"
         :class="{ empty: Number(book.available_copies) === 0 }"
       >

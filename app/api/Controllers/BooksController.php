@@ -35,11 +35,11 @@ class BooksController
 
         $sql = 'SELECT b.id, b.title, b.year, b.category, b.author, b.cover_path, b.grade, b.pdf_url,
                        b.total_copies,
-                       GREATEST(b.total_copies - COUNT(bl.id), 0) AS available_copies,
-                       COUNT(bl.id) AS active_loans_count,
+                       GREATEST(b.total_copies - COALESCE(SUM(bl.quantity - bl.returned_quantity), 0), 0) AS available_copies,
+                       COALESCE(SUM(bl.quantity - bl.returned_quantity), 0) AS active_loans_count,
                        b.created_at, b.updated_at
                 FROM books b
-                LEFT JOIN book_loans bl ON bl.book_id = b.id AND bl.returned_at IS NULL';
+                LEFT JOIN book_loans bl ON bl.book_id = b.id';
         if ($conditions !== []) {
             $sql .= ' WHERE ' . implode(' AND ', array_map(static fn ($item) => 'b.' . $item, $conditions));
         }
@@ -75,10 +75,10 @@ class BooksController
         $statement = $this->pdo->prepare(
             'SELECT b.id, b.title, b.year, b.category, b.author, b.cover_path, b.grade, b.pdf_url,
                     b.total_copies,
-                    GREATEST(b.total_copies - COUNT(bl.id), 0) AS available_copies,
-                    COUNT(bl.id) AS active_loans_count,
+                    GREATEST(b.total_copies - COALESCE(SUM(bl.quantity - bl.returned_quantity), 0), 0) AS available_copies,
+                    COALESCE(SUM(bl.quantity - bl.returned_quantity), 0) AS active_loans_count,
                     b.created_at, b.updated_at
-             FROM books b LEFT JOIN book_loans bl ON bl.book_id = b.id AND bl.returned_at IS NULL
+             FROM books b LEFT JOIN book_loans bl ON bl.book_id = b.id
              WHERE b.id = :id GROUP BY b.id'
         );
         $statement->execute(['id' => $bookId]);
@@ -114,12 +114,9 @@ class BooksController
         $book = $this->validatedInput();
         $book['id'] = $bookId;
 
-        $activeStatement = $this->pdo->prepare('SELECT COUNT(*) FROM book_loans WHERE book_id = :id AND returned_at IS NULL');
+        $activeStatement = $this->pdo->prepare('SELECT COALESCE(SUM(quantity - returned_quantity), 0) FROM book_loans WHERE book_id = :id');
         $activeStatement->execute(['id' => $bookId]);
         $activeLoans = (int)$activeStatement->fetchColumn();
-        if ($activeLoans > 0 && $book['category'] !== 'literature') {
-            throw new ApiException('Не можна перенести книгу з активними видачами до іншого розділу', 409);
-        }
         if ($book['total_copies'] < $activeLoans) {
             throw new ApiException('Кількість примірників не може бути меншою за кількість активних видач', 409);
         }

@@ -89,3 +89,13 @@ CREATE TABLE IF NOT EXISTS book_loans (
     CONSTRAINT fk_book_loans_book FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE RESTRICT,
     CONSTRAINT chk_book_loans_returned CHECK (returned_at IS NULL OR returned_at >= issued_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------- MIGRATION 4 -------------- --
+
+ALTER TABLE book_loans
+    ADD COLUMN quantity SMALLINT UNSIGNED NOT NULL DEFAULT 1 AFTER issued_at,
+    ADD COLUMN returned_quantity SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER quantity,
+    ADD CONSTRAINT chk_book_loans_quantity CHECK (quantity >= 1),
+    ADD CONSTRAINT chk_book_loans_returned_quantity CHECK (returned_quantity <= quantity);
+
+UPDATE book_loans SET returned_quantity = quantity WHERE returned_at IS NOT NULL;
