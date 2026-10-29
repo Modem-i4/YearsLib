@@ -69,3 +69,23 @@ INSERT INTO books (title, year, author, grade, category, pdf_url) VALUES
     ('Всесвітня історія', 2026, 'О. Гісем', 9, 'textbook', 'https://drive.google.com/file/d/18dgdlWeZer0PGA7a-TMCupqSR6IzQMHp'),
     ('Правознавство', 2026, 'Т. Філіпенко', 9, 'textbook', 'https://drive.google.com/file/d/15OqJTbqDf6crAb6YgsqaDxFyRh9NZEyO'),
     ('Історія України', 2026, 'В. Власов', 9, 'textbook', 'https://drive.google.com/file/d/1QzugtzCz4rcdcxMhFpoCUP214ReMuEJQ');
+
+-- ------------- MIGRATION 3 -------------- --
+
+ALTER TABLE books
+    ADD COLUMN total_copies SMALLINT UNSIGNED NOT NULL DEFAULT 1 AFTER pdf_url;
+
+CREATE TABLE IF NOT EXISTS book_loans (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    book_id BIGINT UNSIGNED NOT NULL,
+    borrower_name VARCHAR(190) NOT NULL,
+    issued_at DATE NOT NULL,
+    returned_at DATE NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_book_loans_book_active (book_id, returned_at),
+    KEY idx_book_loans_active (returned_at),
+    CONSTRAINT fk_book_loans_book FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE RESTRICT,
+    CONSTRAINT chk_book_loans_returned CHECK (returned_at IS NULL OR returned_at >= issued_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

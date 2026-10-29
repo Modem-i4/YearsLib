@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import { useBookCatalog } from '../composables/useBookCatalog.js'
 import BookCard from '../components/BookCard.vue'
 import CatalogSearch from '../components/CatalogSearch.vue'
@@ -17,6 +18,15 @@ const {
   selectGrade,
   loadBooks,
 } = useBookCatalog()
+
+const isAdmin = ref(false)
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/admin/session', { headers: { Accept: 'application/json' } })
+    const payload = await response.json()
+    isAdmin.value = response.ok && payload.authenticated === true
+  } catch {}
+})
 </script>
 
 <template>
@@ -70,7 +80,7 @@ const {
         :message="search ? 'Змініть пошуковий запит.' : `У розділі «${selectedCollection === 'textbook' ? 'Підручники' : 'Література'}» поки немає записів.`"
       />
       <section v-else class="book-grid" :aria-label="selectedCollection === 'textbook' ? `Підручники для ${selectedGrade} класу` : 'Література'">
-        <BookCard v-for="book in visibleBooks" :key="book.id" :book="book" />
+        <BookCard v-for="book in visibleBooks" :key="book.id" :book="book" :can-manage="isAdmin" />
       </section>
     </section>
   </main>

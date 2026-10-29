@@ -33,17 +33,28 @@ class BooksController
             $parameters['grade'] = $grade;
         }
 
-        $sql = 'SELECT id, title, year, category, author, cover_path, grade, pdf_url, created_at, updated_at
-                FROM books';
+        $sql = 'SELECT b.id, b.title, b.year, b.category, b.author, b.cover_path, b.grade, b.pdf_url,
+                       b.total_copies,
+                       GREATEST(b.total_copies - COUNT(bl.id), 0) AS available_copies,
+                       COUNT(bl.id) AS active_loans_count,
+                       b.created_at, b.updated_at
+                FROM books b
+                LEFT JOIN book_loans bl ON bl.book_id = b.id AND bl.returned_at IS NULL';
         if ($conditions !== []) {
-            $sql .= ' WHERE ' . implode(' AND ', $conditions);
+            $sql .= ' WHERE ' . implode(' AND ', array_map(static fn ($item) => 'b.' . $item, $conditions));
         }
-        $sql .= ' ORDER BY grade IS NULL, grade, title, id';
+        $sql .= ' GROUP BY b.id ORDER BY b.grade IS NULL, b.grade, b.title, b.id';
 
         $statement = $this->pdo->prepare($sql);
         $statement->execute($parameters);
 
         $books = $statement->fetchAll();
+        if (empty($_SESSION['admin_authenticated'])) {
+            foreach ($books as &$publicBook) {
+                unset($publicBook['active_loans_count']);
+            }
+            unset($publicBook);
+        }
         $grades = [];
 
         if ($category === 'textbook') {
@@ -62,14 +73,22 @@ class BooksController
     {
         $bookId = $this->parseId($id);
         $statement = $this->pdo->prepare(
-            'SELECT id, title, year, category, author, cover_path, grade, pdf_url, created_at, updated_at
-             FROM books WHERE id = :id'
+            'SELECT b.id, b.title, b.year, b.category, b.author, b.cover_path, b.grade, b.pdf_url,
+                    b.total_copies,
+                    GREATEST(b.total_copies - COUNT(bl.id), 0) AS available_copies,
+                    COUNT(bl.id) AS active_loans_count,
+                    b.created_at, b.updated_at
+             FROM books b LEFT JOIN book_loans bl ON bl.book_id = b.id AND bl.returned_at IS NULL
+             WHERE b.id = :id GROUP BY b.id'
         );
         $statement->execute(['id' => $bookId]);
         $book = $statement->fetch();
 
         if ($book === false) {
             throw new ApiException('Book not found', 404);
+        }
+        if (empty($_SESSION['admin_authenticated'])) {
+            unset($book['active_loans_count']);
         }
 
         return ['data' => $book];
@@ -80,8 +99,8 @@ class BooksController
         $this->authorizeWrite();
         $book = $this->validatedInput();
         $statement = $this->pdo->prepare(
-            'INSERT INTO books (title, year, category, author, cover_path, grade, pdf_url)
-             VALUES (:title, :year, :category, :author, :cover_path, :grade, :pdf_url)'
+            'INSERT INTO books (title, year, category, author, cover_path, grade, pdf_url, total_copies)
+             VALUES (:title, :year, :category, :author, :cover_path, :grade, :pdf_url, :total_copies)'
         );
         $statement->execute($book);
 
@@ -95,10 +114,20 @@ class BooksController
         $book = $this->validatedInput();
         $book['id'] = $bookId;
 
+        $activeStatement = $this->pdo->prepare('SELECT COUNT(*) FROM book_loans WHERE book_id = :id AND returned_at IS NULL');
+        $activeStatement->execute(['id' => $bookId]);
+        $activeLoans = (int)$activeStatement->fetchColumn();
+        if ($activeLoans > 0 && $book['category'] !== 'literature') {
+            throw new ApiException('Не можна перенести книгу з активними видачами до іншого розділу', 409);
+        }
+        if ($book['total_copies'] < $activeLoans) {
+            throw new ApiException('Кількість примірників не може бути меншою за кількість активних видач', 409);
+        }
+
         $statement = $this->pdo->prepare(
             'UPDATE books
              SET title = :title, year = :year, category = :category, author = :author, cover_path = :cover_path,
-                 grade = :grade, pdf_url = :pdf_url
+                 grade = :grade, pdf_url = :pdf_url, total_copies = :total_copies
              WHERE id = :id'
         );
         $statement->execute($book);
@@ -164,6 +193,11 @@ class BooksController
             throw new ApiException('cover_path contains invalid characters', 400);
         }
 
+        $totalCopies = $input['total_copies'] ?? 1;
+        $totalCopies = filter_var($totalCopies, FILTER_VALIDATE_INT);
+        if ($totalCopies === false || $totalCopies < 0 || $totalCopies > 65535) {
+            throw new ApiException('total_copies must be an integer from 0 to 65535', 400);
+        }
         return [
             'title' => $title,
             'year' => $year,
@@ -172,6 +206,7 @@ class BooksController
             'cover_path' => $coverPath,
             'grade' => $grade,
             'pdf_url' => $pdfUrl,
+            'total_copies' => $totalCopies,
         ];
     }
 

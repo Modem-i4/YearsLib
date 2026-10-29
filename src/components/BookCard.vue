@@ -1,25 +1,47 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { coverPalette, externalPdfUrl, usesEmbeddedViewer } from '../utils/bookPresentation.js'
 
 const props = defineProps({
   book: { type: Object, required: true },
+  canManage: { type: Boolean, default: false },
 })
 
 const coverFailed = ref(false)
 const pdfUrl = externalPdfUrl(props.book.pdf_url)
 const embeddedViewer = usesEmbeddedViewer(props.book.pdf_url)
+const managesLoans = computed(() => props.canManage && props.book.category === 'literature')
+
+function openLoanAccounting(event) {
+  if (!managesLoans.value || event.target.closest('a')) return
+  window.location.href = `/admin/literature/${props.book.id}`
+}
+
+function openLoanAccountingFromKeyboard(event) {
+  if (!managesLoans.value) return
+  event.preventDefault()
+  window.location.href = `/admin/literature/${props.book.id}`
+}
 </script>
 
 <template>
-  <article class="book-card">
+  <article
+    class="book-card"
+    :class="{ 'is-manageable': managesLoans }"
+    :role="managesLoans ? 'link' : undefined"
+    :tabindex="managesLoans ? 0 : undefined"
+    :aria-label="managesLoans ? `Відкрити облік видачі книги «${book.title}»` : undefined"
+    @click="openLoanAccounting"
+    @keydown.enter="openLoanAccountingFromKeyboard"
+    @keydown.space="openLoanAccountingFromKeyboard"
+  >
     <a
-      v-if="pdfUrl"
+      v-if="pdfUrl || managesLoans"
       class="book-cover-link"
-      :href="embeddedViewer ? `/book/${book.id}` : pdfUrl"
-      :target="embeddedViewer ? undefined : '_blank'"
-      :rel="embeddedViewer ? undefined : 'noopener noreferrer'"
-      :aria-label="embeddedViewer ? `Переглянути книгу «${book.title}»` : `Відкрити книгу «${book.title}» у новій вкладці`"
+      :href="managesLoans ? `/admin/literature/${book.id}` : (embeddedViewer ? `/book/${book.id}` : pdfUrl)"
+      :target="!managesLoans && !embeddedViewer ? '_blank' : undefined"
+      :rel="!managesLoans && !embeddedViewer ? 'noopener noreferrer' : undefined"
+      :aria-label="managesLoans ? `Відкрити облік видачі книги «${book.title}»` : (embeddedViewer ? `Переглянути книгу «${book.title}»` : `Відкрити книгу «${book.title}» у новій вкладці`)"
     >
       <div class="book-cover" :class="`cover-${coverPalette(book)}`">
         <img
@@ -62,6 +84,13 @@ const embeddedViewer = usesEmbeddedViewer(props.book.pdf_url)
       </div>
       <span class="book-format" :class="{ 'has-pdf': pdfUrl }">
         {{ pdfUrl ? 'PDF' : 'Книга' }}
+      </span>
+      <span
+        v-if="book.category === 'literature'"
+        class="book-availability"
+        :class="{ empty: Number(book.available_copies) === 0 }"
+      >
+        {{ Number(book.available_copies) === 0 ? 'Немає в наявності' : `Наявність: ${book.available_copies}/${book.total_copies}` }}
       </span>
     </div>
   </article>

@@ -22,6 +22,14 @@ if (preg_match('~^/book/([1-9][0-9]*)$~', $path, $matches)) {
     exit;
 }
 
+if (preg_match('~^/admin/literature/([1-9][0-9]*)$~', $path, $matches)) {
+    render_page(__DIR__ . '/../app/views/admin.php', [
+        'title' => 'Облік видачі – Бібліотека Years',
+        'book_id' => (int)$matches[1],
+    ]);
+    exit;
+}
+
 if (!isset($routes[$path])) {
     http_response_code(404);
     echo 'Сторінку не знайдено';

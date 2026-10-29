@@ -33,6 +33,7 @@ function emptyBook(category = activeCategory.value) {
     grade: '',
     pdf_url: '',
     cover_path: '',
+    total_copies: 1,
   }
 }
 
@@ -140,6 +141,7 @@ function openEdit(book) {
     grade: book.grade ?? '',
     pdf_url: book.pdf_url ?? '',
     cover_path: book.cover_path ?? '',
+    total_copies: Number(book.total_copies ?? 1),
   }
   coverPreview.value = book.cover_path ?? ''
   editorError.value = ''
@@ -210,6 +212,7 @@ async function saveBook() {
     grade: form.value.category === 'textbook' && form.value.grade !== '' ? Number(form.value.grade) : null,
     pdf_url: form.value.pdf_url.trim() || null,
     cover_path: form.value.cover_path || null,
+    total_copies: form.value.category === 'literature' ? Number(form.value.total_copies) : 1,
   }
 
   try {
@@ -298,11 +301,16 @@ onMounted(checkSession)
             <span v-else>{{ book.title.slice(0, 1) }}</span>
           </div>
           <div class="admin-book-info">
-            <h2>{{ book.title }}<span v-if="book.year"> ({{ book.year }})</span></h2>
+            <h2>
+              <a v-if="book.category === 'literature'" :href="`/admin/literature/${book.id}`">{{ book.title }}<span v-if="book.year"> ({{ book.year }})</span></a>
+              <template v-else>{{ book.title }}<span v-if="book.year"> ({{ book.year }})</span></template>
+            </h2>
             <p>{{ book.author || 'Автор не вказаний' }}</p>
           </div>
           <div class="admin-book-tags">
-            <span>{{ book.category === 'textbook' ? `${book.grade ?? '—'} клас` : 'Література' }}</span>
+            <span v-if="book.category === 'literature'">Наявність {{ book.available_copies }}/{{ book.total_copies }}</span>
+            <span v-if="book.category === 'literature'">Видано {{ book.active_loans_count }}</span>
+            <span v-if="book.category === 'textbook'">{{ book.grade ?? '—' }} клас</span>
             <span>{{ book.pdf_url ? 'PDF' : 'Без PDF' }}</span>
           </div>
           <button class="admin-icon-button" type="button" :aria-label="`Редагувати ${book.title}`" title="Редагувати" @click="openEdit(book)">
@@ -353,6 +361,10 @@ onMounted(checkSession)
                 <option value="">Не вказано</option>
                 <option v-for="grade in Array.from({ length: 11 }, (_, index) => index + 1)" :key="grade" :value="String(grade)">{{ grade }} клас</option>
               </select>
+            </label>
+            <label v-else class="admin-field">
+              <span>Кількість примірників</span>
+              <input v-model="form.total_copies" type="number" min="0" max="65535" inputmode="numeric" required>
             </label>
           </div>
           <label class="admin-field">

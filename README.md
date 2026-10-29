@@ -34,9 +34,12 @@ npm run build
 - `PUT /api/books/{id}` повністю оновлює запис після входу адміністратора.
 - `POST /api/admin/login`, `GET /api/admin/session`, `POST /api/admin/logout` керують адмін-сесією.
 - `POST /api/admin/covers` приймає перевірену WebP-обкладинку для поточної адмін-сесії.
+- `GET /api/admin/books/{id}/loans` повертає статистику та історію видач літератури.
+- `POST /api/admin/books/{id}/loans` реєструє нову видачу; `PUT /api/admin/loans/{id}` редагує її.
+- `POST /api/admin/loans/{id}/return` позначає книгу поверненою. Історія видач не видаляється.
 
 Для `POST` і `PUT` передавайте обов'язкові `title` і `category` (`textbook` або `literature`),
-а за потреби `author`, `grade`, `pdf_url` і `cover_path`. Інші поля можуть бути відсутніми або
+а за потреби `author`, `grade`, `pdf_url`, `cover_path` і `total_copies`. Інші поля можуть бути відсутніми або
 порожніми. Перед створенням і редагуванням увійдіть через `/admin`; ключ перевіряється сервером,
 а авторизація зберігається в HttpOnly SameSite-сесії. `pdf_url`, якщо задано, має бути валідним
 HTTPS-посиланням на зовнішній PDF. Сам документ на сайт не завантажується. Схему створює SQL-файл

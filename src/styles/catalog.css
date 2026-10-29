@@ -756,6 +756,24 @@ input:focus-visible {
   background: #1d62b0;
 }
 
+.book-availability {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  margin: 8px 0 0 6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #25684f;
+  background: color-mix(in srgb, #46a67f 15%, var(--surface));
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.book-availability.empty { color: #a23f34; background: color-mix(in srgb, #d75949 14%, var(--surface)); }
+.book-card.is-manageable { cursor: pointer; }
+.book-card.is-manageable:hover .book-meta h3 { color: var(--accent-hover); }
+.book-card.is-manageable:focus-visible { outline: 3px solid #39806a; outline-offset: 5px; border-radius: 7px; }
+
 :root[data-theme="dark"] .book-format.has-pdf {
   color: #14142d;
   background: #ffdb2a;
@@ -1048,10 +1066,30 @@ input:focus-visible {
 .admin-book-info { min-width: 0; }
 .admin-book-info h2 { overflow: hidden; margin: 0; color: var(--text-strong); font-size: 14px; font-weight: 650; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
 .admin-book-info h2 span { color: var(--text-muted); font-size: 12px; font-weight: 500; }
+.admin-book-info h2 a { color: inherit; text-decoration: none; }
+.admin-book-info h2 a:hover { color: var(--accent-hover); text-decoration: underline; text-underline-offset: 3px; }
 .admin-book-info p { overflow: hidden; margin: 4px 0 0; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 
 .admin-book-tags { display: flex; align-items: center; gap: 7px; }
 .admin-book-tags span { padding: 5px 8px; border-radius: 4px; color: var(--text-muted); background: var(--surface-subtle); font-size: 10px; font-weight: 650; white-space: nowrap; }
+.loan-content { width: min(100% - 48px, 1240px); }
+.loan-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.loan-heading h1 { margin: 0; color: var(--text-strong); font-size: 28px; line-height: 1.2; }
+.loan-heading > div > p:last-child { margin: 6px 0 0; color: var(--text-muted); font-size: 13px; }
+.loan-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 28px; }
+.loan-stats > div { display: grid; gap: 7px; padding: 17px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+.loan-stats span { color: var(--text-muted); font-size: 11px; font-weight: 600; }
+.loan-stats strong { color: var(--text-strong); font-size: 23px; }
+.loan-toolbar { display: flex; align-items: center; margin-top: 28px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.loan-table-wrap { overflow-x: auto; border-bottom: 1px solid var(--line); }
+.loan-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.loan-table th { padding: 12px 10px; color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+.loan-table td { padding: 13px 10px; border-top: 1px solid var(--line); color: var(--text-main); vertical-align: middle; }
+.loan-status { display: inline-flex; padding: 4px 7px; border-radius: 4px; color: #26654d; background: color-mix(in srgb, #46a67f 15%, var(--surface)); font-size: 10px; font-weight: 700; }
+.loan-status.returned { color: var(--text-muted); background: var(--surface-subtle); }
+.loan-actions { display: flex; gap: 6px; }
+.loan-actions .admin-primary-button, .loan-actions .admin-secondary-button { min-height: 32px; padding-inline: 9px; font-size: 11px; }
+.loan-modal { width: min(100%, 560px); }
 
 .admin-table-state,
 .admin-login-state { display: grid; min-height: 200px; place-items: center; color: var(--text-muted); font-size: 14px; }
@@ -1061,9 +1099,40 @@ input:focus-visible {
 .admin-login-form h1 { margin-bottom: 24px; font-size: 23px; }
 
 .admin-field { display: grid; min-width: 0; gap: 7px; color: var(--text-muted); font-size: 12px; font-weight: 600; }
-.admin-field > span b { color: var(--accent); }
+.admin-field > span b,
+.admin-field > label b { color: var(--accent); }
 .admin-field input,
 .admin-field select { width: 100%; padding: 0 10px; }
+.borrower-combobox { position: relative; display: block; min-width: 0; }
+.borrower-combobox > input { display: block; }
+.borrower-suggestions {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  overflow-y: auto;
+  width: 100%;
+  max-height: 220px;
+  top: calc(100% + 4px);
+  left: 0;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(20 35 55 / 14%);
+}
+.borrower-suggestions button {
+  min-height: 34px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 3px;
+  color: var(--text-strong);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+.borrower-suggestions button:hover { background: var(--surface-subtle); }
 .admin-login-form .admin-primary-button { width: 100%; margin-top: 18px; }
 .admin-error { margin: 12px 0 0; color: #c64134; font-size: 12px; line-height: 1.5; }
 
@@ -1113,6 +1182,7 @@ input:focus-visible {
   .admin-header,
   .admin-content { width: min(100% - 32px, 1120px); }
   .admin-content { padding-top: 25px; }
+  .loan-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 560px) {
@@ -1132,6 +1202,14 @@ input:focus-visible {
   .admin-cover-thumb { width: 42px; }
   .admin-book-tags { grid-column: 2; grid-row: 2; }
   .admin-icon-button { grid-column: 3; grid-row: 1 / span 2; width: 36px; height: 36px; }
+  .loan-heading { align-items: stretch; flex-direction: column; }
+  .loan-heading .admin-primary-button { width: 100%; }
+  .loan-table, .loan-table tbody, .loan-table tr, .loan-table td { display: block; width: 100%; }
+  .loan-table thead { display: none; }
+  .loan-table tr { padding: 9px 0; border-top: 1px solid var(--line); }
+  .loan-table td { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; padding: 6px 8px; border: 0; background: transparent !important; }
+  .loan-table td::before { color: var(--text-muted); content: attr(data-label); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+  .loan-actions { flex-wrap: wrap; }
   .admin-modal-backdrop { align-items: end; padding: 0; }
   .admin-modal { width: 100%; max-height: 94dvh; overflow-x: hidden; border-radius: 12px 12px 0 0; }
   .admin-modal-header, .admin-book-form { width: 100%; padding-inline: 16px; }
