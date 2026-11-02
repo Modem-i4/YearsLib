@@ -53,6 +53,7 @@ $routes = [
         '/api/admin/tags/{tagId}' => static fn (string $tagId): array => $tagsController()->update($tagId),
     ],
     'DELETE' => [
+        '/api/books/{id}' => static fn (string $id): array => $booksController()->delete($id),
         '/api/admin/tags/{tagId}' => static fn (string $tagId): array => $tagsController()->delete($tagId),
     ],
 ];

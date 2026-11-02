@@ -165,6 +165,11 @@ async function bookSaved() {
   await load()
 }
 
+function bookDeleted() {
+  const section = book.value?.category === 'literature' ? 'literature' : 'textbooks'
+  window.location.assign(`/#${section}`)
+}
+
 function formatDate(value) {
   if (!value) return '—'
   return new Intl.DateTimeFormat('uk-UA').format(new Date(`${value}T12:00:00`))
@@ -254,6 +259,6 @@ onMounted(initialize)
       </section>
     </div>
 
-    <BookEditorModal v-if="bookEditorOpen" :book="book" @close="bookEditorOpen = false" @saved="bookSaved" />
+    <BookEditorModal v-if="bookEditorOpen" :book="book" @close="bookEditorOpen = false" @saved="bookSaved" @deleted="bookDeleted" />
   </main>
 </template>

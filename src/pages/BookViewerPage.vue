@@ -39,6 +39,10 @@ async function bookSaved() {
   await loadBook()
 }
 
+function bookDeleted() {
+  window.location.assign(backHref)
+}
+
 onMounted(async () => {
   try {
     const sessionResponse = await fetch('/api/admin/session', { headers: { Accept: 'application/json' } })
@@ -118,6 +122,6 @@ onMounted(async () => {
         </div>
       </div>
     </section>
-    <BookEditorModal v-if="bookEditorOpen" :book="book" @close="bookEditorOpen = false" @saved="bookSaved" />
+    <BookEditorModal v-if="bookEditorOpen" :book="book" @close="bookEditorOpen = false" @saved="bookSaved" @deleted="bookDeleted" />
   </main>
 </template>

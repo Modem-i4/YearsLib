@@ -40,6 +40,12 @@ async function bookSaved() {
   await loadBooks(selectedCollection.value, selectedCollection.value === 'textbook' ? selectedGrade.value : null)
 }
 
+async function bookDeleted() {
+  editorOpen.value = false
+  editingBook.value = null
+  await loadBooks(selectedCollection.value, selectedCollection.value === 'textbook' ? selectedGrade.value : null)
+}
+
 onMounted(async () => {
   try {
     const response = await fetch('/api/admin/session', { headers: { Accept: 'application/json' } })
@@ -117,6 +123,7 @@ onMounted(async () => {
       :default-grade="selectedGrade"
       @close="editorOpen = false"
       @saved="bookSaved"
+      @deleted="bookDeleted"
     />
   </main>
 </template>

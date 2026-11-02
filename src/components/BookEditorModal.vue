@@ -7,9 +7,10 @@ const props = defineProps({
   defaultCategory: { type: String, default: 'textbook' },
   defaultGrade: { type: Number, default: null },
 })
-const emit = defineEmits(['close', 'saved'])
+const emit = defineEmits(['close', 'saved', 'deleted'])
 
 const saving = ref(false)
+const deleting = ref(false)
 const editorError = ref('')
 const coverBusy = ref(false)
 const coverPreview = ref(props.book?.cover_path ?? '')
@@ -38,9 +39,24 @@ const isEditing = computed(() => form.value.id !== null)
 const selectedTags = computed(() => tags.value.filter((tag) => form.value.tag_ids.includes(Number(tag.id))))
 
 function close() {
-  if (saving.value || coverBusy.value) return
+  if (saving.value || deleting.value || coverBusy.value) return
   if (coverPreview.value.startsWith('blob:')) URL.revokeObjectURL(coverPreview.value)
   emit('close')
+}
+
+async function deleteBook() {
+  if (!isEditing.value || !window.confirm(`Видалити книгу «${form.value.title}» разом з усією історією її видач? Цю дію неможливо скасувати.`)) return
+
+  deleting.value = true
+  editorError.value = ''
+  try {
+    await api(`/api/books/${form.value.id}`, { method: 'DELETE' })
+    emit('deleted')
+  } catch (error) {
+    editorError.value = error.message
+  } finally {
+    deleting.value = false
+  }
 }
 
 function removeCover() {
@@ -235,7 +251,12 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
     <section class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="book-editor-title">
       <header class="admin-modal-header">
         <div><p class="admin-eyebrow">{{ isEditing ? 'РЕДАГУВАННЯ' : 'НОВИЙ ЗАПИС' }}</p><h2 id="book-editor-title">{{ isEditing ? 'Редагувати книгу' : 'Додати книгу' }}</h2></div>
-        <button class="admin-icon-button" type="button" aria-label="Закрити" title="Закрити" @click="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+        <div class="admin-modal-header-actions">
+          <button v-if="isEditing" class="admin-icon-button admin-delete-book" type="button" :disabled="saving || deleting || coverBusy" aria-label="Видалити книгу" title="Видалити книгу" @click="deleteBook">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></svg>
+          </button>
+          <button class="admin-icon-button" type="button" :disabled="saving || deleting || coverBusy" aria-label="Закрити" title="Закрити" @click="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+        </div>
       </header>
       <form class="admin-book-form" @submit.prevent="save">
         <label class="admin-field"><span>Назва <b>*</b></span><input v-model="form.title" maxlength="190" required autofocus></label>
@@ -300,7 +321,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
           </div>
         </div>
         <p v-if="editorError" class="admin-error" role="alert">{{ editorError }}</p>
-        <footer class="admin-form-actions"><button class="admin-secondary-button" type="button" :disabled="saving || coverBusy" @click="close">Скасувати</button><button class="admin-primary-button" type="submit" :disabled="saving || coverBusy">{{ saving ? 'Збереження…' : (isEditing ? 'Зберегти зміни' : 'Додати книгу') }}</button></footer>
+        <footer class="admin-form-actions"><button class="admin-secondary-button" type="button" :disabled="saving || deleting || coverBusy" @click="close">Скасувати</button><button class="admin-primary-button" type="submit" :disabled="saving || deleting || coverBusy">{{ saving ? 'Збереження…' : (isEditing ? 'Зберегти зміни' : 'Додати книгу') }}</button></footer>
       </form>
     </section>
   </div>

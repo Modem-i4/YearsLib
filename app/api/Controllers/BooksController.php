@@ -8,6 +8,7 @@ class BooksController
 
     public function index(): array
     {
+        $isAdmin = !empty($_SESSION['admin_authenticated']);
         $category = $_GET['category'] ?? null;
         if ($category !== null && !in_array($category, ['textbook', 'literature'], true)) {
             throw new ApiException('category must be textbook or literature', 400);
@@ -32,6 +33,9 @@ class BooksController
             $conditions[] = 'grade = :grade';
             $parameters['grade'] = $grade;
         }
+        if (!$isAdmin) {
+            $conditions[] = 'total_copies > 0';
+        }
 
         $sql = 'SELECT b.id, b.title, b.year, b.category, b.author, b.cover_path, b.grade, b.pdf_url,
                        b.total_copies,
@@ -50,7 +54,7 @@ class BooksController
 
         $books = $statement->fetchAll();
         $this->attachTags($books);
-        if (empty($_SESSION['admin_authenticated'])) {
+        if (!$isAdmin) {
             foreach ($books as &$publicBook) {
                 unset($publicBook['active_loans_count']);
             }
@@ -59,9 +63,10 @@ class BooksController
         $grades = [];
 
         if ($category === 'textbook') {
+            $publicCopiesCondition = $isAdmin ? '' : ' AND total_copies > 0';
             $gradeStatement = $this->pdo->query(
                 "SELECT DISTINCT grade FROM books
-                 WHERE category = 'textbook' AND grade IS NOT NULL
+                 WHERE category = 'textbook' AND grade IS NOT NULL{$publicCopiesCondition}
                  ORDER BY grade"
             );
             $grades = array_map('intval', $gradeStatement->fetchAll(PDO::FETCH_COLUMN));
@@ -85,7 +90,7 @@ class BooksController
         $statement->execute(['id' => $bookId]);
         $book = $statement->fetch();
 
-        if ($book === false) {
+        if ($book === false || (empty($_SESSION['admin_authenticated']) && (int)$book['total_copies'] === 0)) {
             throw new ApiException('Book not found', 404);
         }
         $books = [$book];
@@ -154,6 +159,32 @@ class BooksController
         }
 
         return $this->show((string)$bookId);
+    }
+
+    public function delete(string $id): array
+    {
+        $this->authorizeWrite();
+        $bookId = $this->parseId($id);
+        $this->pdo->beginTransaction();
+        try {
+            $book = $this->pdo->prepare('SELECT id FROM books WHERE id = :id FOR UPDATE');
+            $book->execute(['id' => $bookId]);
+            if ($book->fetchColumn() === false) {
+                throw new ApiException('Книгу не знайдено', 404);
+            }
+
+            $loans = $this->pdo->prepare('DELETE FROM book_loans WHERE book_id = :id');
+            $loans->execute(['id' => $bookId]);
+
+            $statement = $this->pdo->prepare('DELETE FROM books WHERE id = :id');
+            $statement->execute(['id' => $bookId]);
+            $this->pdo->commit();
+        } catch (Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
+
+        return ['ok' => true];
     }
 
     private function validatedInput(): array

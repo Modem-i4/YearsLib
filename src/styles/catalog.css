@@ -986,7 +986,11 @@ input:focus-visible {
 }
 
 .admin-icon-button:hover { border-color: var(--accent); color: var(--accent-hover); }
+.admin-icon-button:disabled { opacity: 0.55; cursor: not-allowed; }
 .admin-icon-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+.admin-modal-header-actions { display: flex; align-items: center; gap: 8px; }
+.admin-delete-book { color: #d75949; }
+.admin-delete-book:hover:not(:disabled) { border-color: #d75949; color: #bf4033; background: rgba(215, 89, 73, 0.08); }
 
 .admin-content {
   width: min(100% - 48px, 1120px);
