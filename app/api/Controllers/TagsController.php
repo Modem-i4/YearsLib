@@ -9,7 +9,7 @@ class TagsController
     public function index(): array
     {
         $this->authorize();
-        return ['data' => $this->pdo->query('SELECT id, name, color FROM tags ORDER BY name, id')->fetchAll()];
+        return ['data' => $this->pdo->query('SELECT id, name, color, show_in_filters FROM tags ORDER BY name, id')->fetchAll()];
     }
 
     public function create(): array
@@ -17,7 +17,7 @@ class TagsController
         $this->authorize();
         $tag = $this->validatedTag();
         try {
-            $statement = $this->pdo->prepare('INSERT INTO tags (name, color) VALUES (:name, :color)');
+            $statement = $this->pdo->prepare('INSERT INTO tags (name, color, show_in_filters) VALUES (:name, :color, :show_in_filters)');
             $statement->execute($tag);
         } catch (PDOException $error) {
             if (($error->errorInfo[1] ?? null) === 1062) throw new ApiException('Тег із такою назвою вже існує', 409);
@@ -32,7 +32,7 @@ class TagsController
         $id = $this->parseId($tagId);
         $tag = $this->validatedTag();
         try {
-            $statement = $this->pdo->prepare('UPDATE tags SET name = :name, color = :color WHERE id = :id');
+            $statement = $this->pdo->prepare('UPDATE tags SET name = :name, color = :color, show_in_filters = :show_in_filters WHERE id = :id');
             $statement->execute($tag + ['id' => $id]);
         } catch (PDOException $error) {
             if (($error->errorInfo[1] ?? null) === 1062) throw new ApiException('Тег із такою назвою вже існує', 409);
@@ -63,7 +63,9 @@ class TagsController
         if ($name === '' || mb_strlen($name, 'UTF-8') > 80) throw new ApiException('Назва тегу має містити від 1 до 80 символів', 400);
         $color = $input['color'] ?? 'blue';
         if (!is_string($color) || !in_array($color, self::COLORS, true)) throw new ApiException('Неприпустимий колір тегу', 400);
-        return ['name' => $name, 'color' => $color];
+        $showInFilters = $input['show_in_filters'] ?? false;
+        if (!is_bool($showInFilters)) throw new ApiException('show_in_filters must be a boolean', 400);
+        return ['name' => $name, 'color' => $color, 'show_in_filters' => $showInFilters ? 1 : 0];
     }
 
     private function parseId(string $id): int

@@ -280,13 +280,18 @@ class BooksController
         $ids = array_map(static fn (array $book): int => (int)$book['id'], $books);
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
         $statement = $this->pdo->prepare(
-            "SELECT bt.book_id, t.id, t.name, t.color FROM book_tags bt JOIN tags t ON t.id = bt.tag_id
+            "SELECT bt.book_id, t.id, t.name, t.color, t.show_in_filters FROM book_tags bt JOIN tags t ON t.id = bt.tag_id
              WHERE bt.book_id IN ({$placeholders}) ORDER BY t.name, t.id"
         );
         $statement->execute($ids);
         $tagsByBook = [];
         foreach ($statement->fetchAll() as $tag) {
-            $tagsByBook[(int)$tag['book_id']][] = ['id' => (int)$tag['id'], 'name' => $tag['name'], 'color' => $tag['color']];
+            $tagsByBook[(int)$tag['book_id']][] = [
+                'id' => (int)$tag['id'],
+                'name' => $tag['name'],
+                'color' => $tag['color'],
+                'show_in_filters' => (bool)$tag['show_in_filters'],
+            ];
         }
         foreach ($books as &$book) $book['tags'] = $tagsByBook[(int)$book['id']] ?? [];
         unset($book);

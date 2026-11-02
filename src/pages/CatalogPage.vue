@@ -6,6 +6,7 @@ import BookEditorModal from '../components/BookEditorModal.vue'
 import CatalogSearch from '../components/CatalogSearch.vue'
 import CatalogState from '../components/CatalogState.vue'
 import GradeSelector from '../components/GradeSelector.vue'
+import LiteratureTagFilter from '../components/LiteratureTagFilter.vue'
 import LibraryHeader from '../components/LibraryHeader.vue'
 
 const {
@@ -13,10 +14,13 @@ const {
   selectedCollection,
   selectedGrade,
   search,
+  filterTags,
+  selectedTagIds,
   loading,
   loadError,
   visibleBooks,
   selectGrade,
+  toggleTagFilter,
   loadBooks,
 } = useBookCatalog()
 
@@ -88,6 +92,13 @@ onMounted(async () => {
           Класів із доданими підручниками поки немає.
         </p>
 
+        <LiteratureTagFilter
+          v-if="selectedCollection === 'literature' && filterTags.length > 0"
+          :tags="filterTags"
+          :selected-ids="selectedTagIds"
+          @toggle="toggleTagFilter"
+        />
+
         <CatalogSearch
           v-if="selectedCollection === 'literature' || selectedGrade !== null"
           v-model="search"
@@ -109,7 +120,7 @@ onMounted(async () => {
       <CatalogState
         v-else-if="visibleBooks.length === 0"
         state="empty"
-        :message="search ? 'Змініть пошуковий запит.' : `У розділі «${selectedCollection === 'textbook' ? 'Підручники' : 'Література'}» поки немає записів.`"
+        :message="search || selectedTagIds.length ? 'Змініть пошуковий запит або обрані фільтри.' : `У розділі «${selectedCollection === 'textbook' ? 'Підручники' : 'Література'}» поки немає записів.`"
       />
       <section v-else class="book-grid" :aria-label="selectedCollection === 'textbook' ? `Підручники для ${selectedGrade} класу` : 'Література'">
         <BookCard v-for="book in visibleBooks" :key="book.id" :book="book" :can-manage="isAdmin" @edit="openEdit" />

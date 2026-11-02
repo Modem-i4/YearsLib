@@ -36,18 +36,39 @@ export function useBookCatalog() {
   const gradeOptions = ref([])
   const books = ref([])
   const search = ref('')
+  const selectedTagIds = ref([])
   const loading = ref(false)
   const loadError = ref('')
   let requestNumber = 0
 
   const visibleBooks = computed(() => {
     const query = search.value.trim().toLocaleLowerCase('uk')
-    if (!query) return books.value
-
-    return books.value.filter((book) =>
-      [book.title, book.author].some((value) => value?.toLocaleLowerCase('uk').includes(query)),
-    )
+    return books.value.filter((book) => {
+      const matchesQuery = !query || [book.title, book.author]
+        .some((value) => value?.toLocaleLowerCase('uk').includes(query))
+      const matchesTags = selectedTagIds.value.length === 0 || book.tags?.some((tag) =>
+        selectedTagIds.value.includes(Number(tag.id)),
+      )
+      return matchesQuery && matchesTags
+    })
   })
+
+  const filterTags = computed(() => {
+    const uniqueTags = new Map()
+    for (const book of books.value) {
+      for (const tag of book.tags ?? []) {
+        if (Boolean(tag.show_in_filters)) uniqueTags.set(Number(tag.id), tag)
+      }
+    }
+    return [...uniqueTags.values()].sort((left, right) => left.name.localeCompare(right.name, 'uk'))
+  })
+
+  function toggleTagFilter(tagId) {
+    const id = Number(tagId)
+    selectedTagIds.value = selectedTagIds.value.includes(id)
+      ? selectedTagIds.value.filter((selectedId) => selectedId !== id)
+      : [...selectedTagIds.value, id]
+  }
 
   function selectGrade(grade) {
     selectedGrade.value = grade
@@ -60,6 +81,7 @@ export function useBookCatalog() {
     const currentRequest = ++requestNumber
     books.value = []
     search.value = ''
+    selectedTagIds.value = []
     loadError.value = ''
     if (collection === 'textbook') gradeOptions.value = []
     loading.value = true
@@ -118,10 +140,13 @@ export function useBookCatalog() {
     selectedGrade,
     books,
     search,
+    filterTags,
+    selectedTagIds,
     loading,
     loadError,
     visibleBooks,
     selectGrade,
+    toggleTagFilter,
     loadBooks,
   }
 }

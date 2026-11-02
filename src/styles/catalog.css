@@ -462,6 +462,27 @@ input:focus-visible {
   font-weight: 650;
 }
 
+.literature-filter-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.literature-filter-row h2 {
+  min-width: 47px;
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.literature-filter-list { display: flex; min-width: 0; flex: 1; flex-wrap: wrap; gap: 7px; }
+.literature-filter-button { min-height: 34px; padding: 5px 11px; border: 2px solid var(--tag-bg); border-radius: 999px; color: var(--tag-bg); background: transparent; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; transition: color 130ms ease, background-color 130ms ease, box-shadow 130ms ease; }
+.literature-filter-button:hover { box-shadow: inset 0 0 0 1px var(--tag-bg); }
+.literature-filter-button.is-active { color: var(--tag-text); background: var(--tag-bg); }
+:root[data-theme="dark"] .literature-filter-button { background: rgb(255 255 255 / 8%); }
+:root[data-theme="dark"] .literature-filter-button.is-active { background: var(--tag-bg); }
+
 .no-grade-options {
   margin: 0;
   color: var(--text-muted);
@@ -1154,6 +1175,8 @@ input:focus-visible {
 .tag-edit-row .tag-color-swatch { width: 24px; height: 24px; border: 2px solid transparent; border-radius: 50%; background: var(--tag-bg); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 24%); }
 .tag-edit-row .tag-color-swatch:hover { border-color: color-mix(in srgb, var(--tag-bg) 65%, #fff); }
 .tag-edit-row .tag-color-swatch.active { border-color: var(--text-strong); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--text-strong); }
+.tag-filter-option { display: flex; grid-column: 1 / -1; align-items: center; gap: 8px; padding: 4px 2px 2px; color: var(--text-muted); cursor: pointer; font-size: 12px; font-weight: 600; }
+.tag-edit-row .tag-filter-option input { width: 16px; min-height: 16px; flex: 0 0 auto; padding: 0; accent-color: var(--accent); }
 .tag-empty { margin: 8px; color: var(--text-soft); font-size: 12px; font-weight: 400; }
 .borrower-combobox { position: relative; display: block; min-width: 0; }
 .borrower-combobox > input { display: block; }
@@ -1388,6 +1411,8 @@ input:focus-visible {
   }
   .viewer-fallback-note { padding: 0 12px; }
   .grade-row { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .literature-filter-row { flex-direction: column; gap: 10px; }
+  .literature-filter-row h2 { margin-top: 0; }
   .grade-selector { width: 100%; gap: 5px; }
   .grade-button { width: calc((100% - 50px) / 6); min-height: 36px; }
   .catalog-toolbar { align-items: flex-start; flex-direction: column-reverse; gap: 10px; }

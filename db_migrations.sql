@@ -124,3 +124,8 @@ CREATE TABLE IF NOT EXISTS book_tags (
 
 ALTER TABLE tags
     ADD COLUMN color VARCHAR(20) NOT NULL DEFAULT 'blue' AFTER name;
+
+-- ------------- MIGRATION 7 -------------- --
+
+ALTER TABLE tags
+    ADD COLUMN show_in_filters TINYINT(1) NOT NULL DEFAULT 0 AFTER color;

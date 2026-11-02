@@ -20,6 +20,7 @@ const tagsOpen = ref(false)
 const editingTagId = ref(null)
 const tagDraft = ref('')
 const tagColor = ref('blue')
+const tagShowInFilters = ref(false)
 const tagInput = ref(null)
 const tagField = ref(null)
 const tagColors = ['blue', 'coral', 'yellow', 'green', 'violet', 'pink', 'teal', 'orange', 'slate', 'brown']
@@ -102,6 +103,7 @@ function startAddTag() {
   editingTagId.value = 'new'
   tagDraft.value = ''
   tagColor.value = tagColors[Math.floor(Math.random() * tagColors.length)]
+  tagShowInFilters.value = false
   focusTagInput()
 }
 
@@ -109,6 +111,7 @@ function startEditTag(tag) {
   editingTagId.value = Number(tag.id)
   tagDraft.value = tag.name
   tagColor.value = tag.color || 'blue'
+  tagShowInFilters.value = Boolean(Number(tag.show_in_filters))
   focusTagInput()
 }
 
@@ -116,6 +119,7 @@ function cancelTagEdit() {
   editingTagId.value = null
   tagDraft.value = ''
   tagColor.value = 'blue'
+  tagShowInFilters.value = false
 }
 
 function closeTagsOnOutsideClick(event) {
@@ -133,7 +137,7 @@ async function saveTag() {
     const isNew = editingTagId.value === 'new'
     const result = await api(isNew ? '/api/admin/tags' : `/api/admin/tags/${editingTagId.value}`, {
       method: isNew ? 'POST' : 'PUT',
-      body: JSON.stringify({ name, color: tagColor.value }),
+      body: JSON.stringify({ name, color: tagColor.value, show_in_filters: tagShowInFilters.value }),
     })
     if (isNew) {
       tags.value.push(result.data)
@@ -285,6 +289,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
               <button type="button" aria-label="Зберегти тег" title="Зберегти" @click="saveTag">✓</button>
               <button type="button" aria-label="Скасувати" title="Скасувати" @click="cancelTagEdit">×</button>
               <div class="tag-color-options" aria-label="Колір тегу"><button v-for="color in tagColors" :key="color" class="tag-color-swatch" :class="[`tag-color-${color}`, { active: tagColor === color }]" type="button" :aria-label="`Обрати колір ${color}`" @click="tagColor = color" /></div>
+              <label class="tag-filter-option"><input v-model="tagShowInFilters" type="checkbox"><span>Показати в фільтрах для пошуку</span></label>
             </div>
             <div v-for="tag in tags" :key="tag.id" class="tag-option-row">
               <div v-if="editingTagId === Number(tag.id)" class="tag-edit-row">
@@ -292,6 +297,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
                 <button type="button" aria-label="Зберегти тег" title="Зберегти" @click="saveTag">✓</button>
                 <button type="button" aria-label="Скасувати" title="Скасувати" @click="cancelTagEdit">×</button>
                 <div class="tag-color-options" aria-label="Колір тегу"><button v-for="color in tagColors" :key="color" class="tag-color-swatch" :class="[`tag-color-${color}`, { active: tagColor === color }]" type="button" :aria-label="`Обрати колір ${color}`" @click="tagColor = color" /></div>
+                <label class="tag-filter-option"><input v-model="tagShowInFilters" type="checkbox"><span>Показати в фільтрах для пошуку</span></label>
               </div>
               <template v-else>
                 <label class="tag-option"><input type="checkbox" :checked="form.tag_ids.includes(Number(tag.id))" @change="toggleTag(tag.id)"><span>{{ tag.name }}</span></label>
