@@ -1164,6 +1164,35 @@ textarea:focus-visible {
 .loan-actions .admin-primary-button, .loan-actions .admin-secondary-button { min-height: 32px; padding-inline: 9px; font-size: 11px; }
 .loan-modal { width: min(100%, 560px); }
 .loan-return-modal { width: min(100%, 440px); }
+.unreturned-content { padding-bottom: 60px; }
+.unreturned-content > .loan-heading { margin-bottom: 28px; }
+.unreturned-section { overflow: hidden; margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.unreturned-section-toggle { display: flex; width: 100%; min-height: 58px; align-items: center; gap: 10px; padding: 0 16px; border: 0; color: var(--text-strong); background: transparent; cursor: pointer; text-align: left; }
+.unreturned-section-toggle:hover { background: var(--surface-subtle); }
+.unreturned-section-toggle > span { flex: 1; font-size: 15px; font-weight: 700; }
+.unreturned-section-toggle > strong { display: grid; min-width: 25px; height: 25px; place-items: center; padding-inline: 6px; border-radius: 999px; color: var(--text-muted); background: var(--surface-subtle); font-size: 11px; }
+.unreturned-section-toggle > svg { width: 19px; height: 19px; fill: none; stroke: var(--text-muted); stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; transition: transform .16s ease; }
+.unreturned-section-toggle > svg.open { transform: rotate(180deg); }
+.unreturned-section-header { display: flex; min-height: 58px; align-items: center; gap: 10px; padding: 8px 10px 8px 16px; }
+.unreturned-section-title { align-self: stretch; flex: 1; padding: 0; border: 0; color: var(--text-strong); background: transparent; cursor: pointer; font-size: 15px; font-weight: 700; text-align: left; }
+.unreturned-section-count { display: grid; min-width: 25px; height: 25px; flex: 0 0 auto; place-items: center; padding-inline: 6px; border-radius: 999px; color: var(--text-muted); background: var(--surface-subtle); font-size: 11px; }
+.unreturned-section-chevron { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; padding: 0; border: 0; border-radius: 5px; color: var(--text-muted); background: transparent; cursor: pointer; }
+.unreturned-section-chevron:hover { color: var(--accent-hover); background: var(--surface-subtle); }
+.unreturned-section-chevron svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; transition: transform .16s ease; }
+.unreturned-section-chevron svg.open { transform: rotate(180deg); }
+.unreturned-section .loan-table-wrap { border-top: 1px solid var(--line); border-bottom: 0; }
+.unreturned-search { width: min(42vw, 380px); flex: 0 1 380px; }
+.unreturned-table td:first-child { min-width: 220px; }
+.unreturned-table .admin-primary-button { min-height: 32px; padding-inline: 10px; font-size: 11px; }
+.unreturned-book-link { color: var(--text-strong); font-weight: 700; text-decoration: none; }
+.unreturned-book-link:hover { color: var(--accent-hover); text-decoration: underline; }
+.unreturned-table small { display: block; margin-top: 4px; color: var(--text-muted); font-size: 10px; }
+.unreturned-borrower { margin: 0; color: var(--text-muted); font-size: 13px; }
+.unreturned-class-groups { display: grid; gap: 0; border-top: 1px solid var(--line); }
+.unreturned-class-group + .unreturned-class-group { border-top: 8px solid var(--surface-subtle); }
+.unreturned-class-group > h3 { display: flex; align-items: center; gap: 8px; margin: 0; padding: 13px 16px; color: var(--text-strong); font-size: 13px; }
+.unreturned-class-group > h3 span { display: grid; min-width: 21px; height: 21px; place-items: center; padding-inline: 5px; border-radius: 999px; color: var(--text-muted); background: var(--surface-subtle); font-size: 10px; }
+.unreturned-class-group .loan-table-wrap { border-top: 1px solid var(--line); }
 
 .admin-table-state,
 .admin-login-state { display: grid; min-height: 200px; place-items: center; color: var(--text-muted); font-size: 14px; }
@@ -1364,6 +1393,9 @@ textarea:focus-visible {
     min-height: 0;
     height: auto;
   }
+  .unreturned-section-header { flex-wrap: wrap; padding-block: 10px; }
+  .unreturned-section-title { min-height: 34px; }
+  .unreturned-search { order: 4; width: 100%; flex-basis: 100%; }
 }
 
 @media (max-width: 560px) {
@@ -1382,6 +1414,10 @@ textarea:focus-visible {
     gap: 6px;
     padding: 8px 0;
   }
+
+  .primary-nav.has-admin-link { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .primary-nav.has-admin-link .nav-link { padding-inline: 5px; font-size: 11px; text-align: center; }
 
   .nav-link {
     display: grid;

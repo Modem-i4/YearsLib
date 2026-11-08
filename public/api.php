@@ -38,6 +38,7 @@ $routes = [
         '/api/books' => static fn (): array => $booksController()->index(),
         '/api/books/{id}' => static fn (string $id): array => $booksController()->show($id),
         '/api/admin/books/{bookId}/loans' => static fn (string $bookId): array => $loansController()->index($bookId),
+        '/api/admin/loans/unreturned' => static fn (): array => $loansController()->unreturned(),
         '/api/admin/tags' => static fn (): array => $tagsController()->index(),
         '/api/admin/placements' => static fn (): array => $placementsController()->index(),
     ],

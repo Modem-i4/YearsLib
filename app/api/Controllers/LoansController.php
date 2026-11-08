@@ -24,6 +24,22 @@ class LoansController
         return ['book' => $this->stats($book), 'data' => $statement->fetchAll(), 'people' => $people->fetchAll(PDO::FETCH_COLUMN)];
     }
 
+    public function unreturned(): array
+    {
+        $this->authorize();
+        $statement = $this->pdo->query(
+            'SELECT bl.id, bl.book_id, bl.borrower_name, bl.issued_at, bl.quantity, bl.returned_quantity,
+                    bl.quantity - bl.returned_quantity AS remaining_quantity, bl.notes,
+                    b.title, b.year, b.category, b.author, b.grade, p.name AS placement_name
+             FROM book_loans bl
+             JOIN books b ON b.id = bl.book_id
+             LEFT JOIN placements p ON p.id = b.placement_id
+             WHERE bl.quantity > bl.returned_quantity
+             ORDER BY b.category = "literature" DESC, b.title, bl.issued_at, bl.id'
+        );
+        return ['data' => $statement->fetchAll()];
+    }
+
     public function create(string $bookId): array
     {
         $this->authorize();

@@ -37,6 +37,7 @@ npm run build
 - `POST /api/admin/covers` приймає перевірену WebP-обкладинку для поточної адмін-сесії.
 - `GET/POST/PUT/DELETE /api/admin/placements` керують довідником розміщень літератури (для зміни й видалення в URL додається `{id}`).
 - `GET /api/admin/books/{id}/loans` повертає статистику та історію видач книги.
+- `GET /api/admin/loans/unreturned` повертає всі активні видачі літератури й підручників.
 - `POST /api/admin/books/{id}/loans` реєструє видачу одного чи кількох примірників із необов'язковим полем `notes`; `PUT /api/admin/loans/{id}` редагує її.
 - `POST /api/admin/loans/{id}/return` реєструє повне або часткове повернення, не видаляючи сам запис.
 - `DELETE /api/admin/loans/{id}` видаляє окремий запис з історії видач.

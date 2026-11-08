@@ -12,6 +12,7 @@ if (str_starts_with($path, '/api')) {
 $routes = [
     '/' => ['title' => 'Шкільна бібліотека', 'view' => __DIR__ . '/../app/views/library.php'],
     '/admin' => ['title' => 'Вхід адміністратора', 'view' => __DIR__ . '/../app/views/admin.php'],
+    '/admin/unreturned' => ['title' => 'Неповернені книжки – Бібліотека Years', 'view' => __DIR__ . '/../app/views/admin.php'],
 ];
 
 if (preg_match('~^/book/([1-9][0-9]*)$~', $path, $matches)) {

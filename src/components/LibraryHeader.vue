@@ -45,7 +45,7 @@ onMounted(async () => {
         <img class="brand-logo" :src="logoUrl" alt="">
         <span>Бібліотека Years</span>
       </a>
-      <nav class="primary-nav" aria-label="Основна навігація">
+      <nav class="primary-nav" :class="{ 'has-admin-link': isAdminAuthenticated }" aria-label="Основна навігація">
         <a
           class="nav-link"
           :class="{ 'is-current': collection === 'textbook' }"
@@ -56,6 +56,12 @@ onMounted(async () => {
           :class="{ 'is-current': collection === 'literature' }"
           :href="isViewer ? '/#literature' : '#literature'"
         >Література</a>
+        <a
+          v-if="isAdminAuthenticated"
+          class="nav-link"
+          :class="{ 'is-current': collection === 'unreturned' }"
+          href="/admin/unreturned"
+        >Неповернені книжки</a>
       </nav>
       <div class="library-header-actions">
         <button v-if="isAdminAuthenticated" class="header-logout" type="button" aria-label="Вийти" title="Вийти" @click="logout">
