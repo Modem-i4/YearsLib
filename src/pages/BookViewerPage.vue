@@ -85,7 +85,7 @@ onMounted(async () => {
             <p class="viewer-kicker">{{ book.category === 'textbook' ? 'ПІДРУЧНИК' : 'ЛІТЕРАТУРА' }}</p>
             <h1 id="viewer-title">{{ book.title }}<span v-if="book.year"> ({{ book.year }})</span></h1>
             <p class="viewer-author">
-              {{ book.author || 'Автор не вказаний' }}<span v-if="book.grade"> · {{ book.grade }} клас</span>
+              {{ book.author || 'Автор не вказаний' }}<span v-if="book.grade"> · {{ book.grade }} клас</span><span v-else-if="book.placement"> · {{ book.placement.name }}</span>
             </p>
             <div v-if="book.tags?.length" class="viewer-tags"><span v-for="tag in book.tags" :key="tag.id" class="book-tag" :class="`tag-color-${tag.color || 'blue'}`">{{ tag.name }}</span></div>
           </div>

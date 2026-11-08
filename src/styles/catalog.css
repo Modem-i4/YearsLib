@@ -96,7 +96,8 @@ input {
 
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible {
   outline: 3px solid #39806a;
   outline-offset: 3px;
 }
@@ -855,6 +856,26 @@ input:focus-visible {
   background: #1d62b0;
 }
 
+.book-unused-status {
+  display: inline-flex;
+  min-height: 20px;
+  align-items: center;
+  margin: 8px 0 0 6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #8a4b0f;
+  background: color-mix(in srgb, #e9a23b 20%, var(--surface));
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.unused-textbooks-toggle-wrap { display: flex; justify-content: center; padding: 30px 0 4px; }
+.unused-textbooks-toggle { display: inline-flex; min-height: 40px; align-items: center; gap: 9px; padding: 0 15px; border: 1px solid var(--line); border-radius: 5px; color: var(--text-main); background: var(--surface); cursor: pointer; font-size: 12px; font-weight: 700; }
+.unused-textbooks-toggle:hover { border-color: var(--accent); color: var(--accent-hover); }
+.unused-textbooks-toggle span { display: grid; min-width: 21px; height: 21px; place-items: center; padding-inline: 5px; border-radius: 999px; color: var(--text-muted); background: var(--surface-subtle); font-size: 10px; }
+.catalog-load-more-sentinel { width: 100%; height: 1px; }
+
 .book-availability {
   display: inline-flex;
   min-height: 20px;
@@ -1097,7 +1118,8 @@ input:focus-visible {
 }
 
 .admin-field input,
-.admin-field select {
+.admin-field select,
+.admin-field textarea {
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 5px;
@@ -1128,6 +1150,11 @@ input:focus-visible {
 .loan-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .loan-table th { padding: 12px 10px; color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-align: left; text-transform: uppercase; white-space: nowrap; }
 .loan-table td { padding: 13px 10px; border-top: 1px solid var(--line); color: var(--text-main); vertical-align: middle; }
+.loan-note-cell { min-width: 180px; max-width: 280px; }
+.loan-note { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.loan-note.collapsed { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.loan-note-toggle { margin-top: 4px; padding: 0; border: 0; color: var(--accent-hover); background: transparent; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; }
+.loan-note-toggle:hover { text-decoration: underline; }
 .loan-status { display: inline-flex; padding: 4px 7px; border-radius: 4px; color: #26654d; background: color-mix(in srgb, #46a67f 15%, var(--surface)); font-size: 10px; font-weight: 700; }
 .loan-status.returned { color: var(--text-muted); background: var(--surface-subtle); }
 .loan-status.partial { color: #9a5b16; background: color-mix(in srgb, #e9a23b 16%, var(--surface)); }
@@ -1147,7 +1174,11 @@ input:focus-visible {
 .admin-field > span b,
 .admin-field > label b { color: var(--accent); }
 .admin-field input,
-.admin-field select { width: 100%; padding: 0 10px; }
+.admin-field select,
+.admin-field textarea { width: 100%; padding: 0 10px; }
+.admin-field textarea { min-height: 90px; padding-block: 9px; resize: vertical; line-height: 1.45; }
+.admin-checkbox-field { display: flex; align-items: center; gap: 9px; color: var(--text-strong); cursor: pointer; font-size: 13px; font-weight: 600; }
+.admin-checkbox-field input { width: 17px; min-height: 17px; flex: 0 0 auto; padding: 0; accent-color: var(--accent); }
 .tag-field { position: relative; }
 .tag-select-trigger { display: flex; width: 100%; min-height: 42px; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--text-strong); background: var(--surface); cursor: pointer; text-align: left; }
 .tag-select-trigger > svg { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: var(--text-muted); stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
@@ -1281,6 +1312,7 @@ input:focus-visible {
   .loan-table thead { display: none; }
   .loan-table tr { padding: 9px 0; border-top: 1px solid var(--line); }
   .loan-table td { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; padding: 6px 8px; border: 0; background: transparent !important; }
+  .loan-note-cell { max-width: none; }
   .loan-table td::before { color: var(--text-muted); content: attr(data-label); font-size: 10px; font-weight: 700; text-transform: uppercase; }
   .loan-actions { flex-wrap: wrap; }
   .admin-modal-backdrop { align-items: end; padding: 0; }

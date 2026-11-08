@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useBookCatalog } from '../composables/useBookCatalog.js'
 import BookCard from '../components/BookCard.vue'
 import BookEditorModal from '../components/BookEditorModal.vue'
@@ -27,6 +27,51 @@ const {
 const isAdmin = ref(false)
 const editorOpen = ref(false)
 const editingBook = ref(null)
+const showUnusedTextbooks = ref(false)
+const literaturePageSize = 20
+const renderedLiteratureCount = ref(literaturePageSize)
+const loadMoreSentinel = ref(null)
+let loadMoreObserver = null
+const usedBooks = computed(() => selectedCollection.value === 'textbook'
+  ? visibleBooks.value.filter((book) => Boolean(Number(book.is_used)))
+  : visibleBooks.value)
+const unusedBooks = computed(() => selectedCollection.value === 'textbook'
+  ? visibleBooks.value.filter((book) => !Boolean(Number(book.is_used)))
+  : [])
+const displayedBooks = computed(() => {
+  if (selectedCollection.value === 'literature') {
+    return visibleBooks.value.slice(0, renderedLiteratureCount.value)
+  }
+  return showUnusedTextbooks.value ? [...usedBooks.value, ...unusedBooks.value] : usedBooks.value
+})
+const hasMoreLiterature = computed(() => selectedCollection.value === 'literature'
+  && displayedBooks.value.length < visibleBooks.value.length)
+const catalogResultCount = computed(() => selectedCollection.value === 'literature'
+  ? visibleBooks.value.length
+  : displayedBooks.value.length)
+
+watch([selectedCollection, selectedGrade], () => {
+  showUnusedTextbooks.value = false
+})
+
+watch(visibleBooks, () => {
+  renderedLiteratureCount.value = literaturePageSize
+})
+
+watch(loadMoreSentinel, (element, previousElement) => {
+  if (previousElement && loadMoreObserver) loadMoreObserver.unobserve(previousElement)
+  if (element && loadMoreObserver) loadMoreObserver.observe(element)
+})
+
+async function loadMoreLiterature() {
+  if (!hasMoreLiterature.value) return
+  renderedLiteratureCount.value += literaturePageSize
+  await nextTick()
+  const sentinel = loadMoreSentinel.value
+  if (hasMoreLiterature.value && sentinel?.getBoundingClientRect().top <= window.innerHeight + 300) {
+    await loadMoreLiterature()
+  }
+}
 
 function openCreate() {
   editingBook.value = null
@@ -51,12 +96,19 @@ async function bookDeleted() {
 }
 
 onMounted(async () => {
+  loadMoreObserver = new IntersectionObserver((entries) => {
+    if (entries.some((entry) => entry.isIntersecting)) loadMoreLiterature()
+  }, { rootMargin: '300px 0px' })
+  if (loadMoreSentinel.value) loadMoreObserver.observe(loadMoreSentinel.value)
+
   try {
     const response = await fetch('/api/admin/session', { headers: { Accept: 'application/json' } })
     const payload = await response.json()
     isAdmin.value = response.ok && payload.authenticated === true
   } catch {}
 })
+
+onBeforeUnmount(() => loadMoreObserver?.disconnect())
 </script>
 
 <template>
@@ -102,7 +154,7 @@ onMounted(async () => {
         <CatalogSearch
           v-if="selectedCollection === 'literature' || selectedGrade !== null"
           v-model="search"
-          :count="visibleBooks.length"
+          :count="catalogResultCount"
           :loading="loading"
           :selected-grade="selectedCollection === 'textbook' ? selectedGrade : null"
           :collection="selectedCollection"
@@ -122,9 +174,18 @@ onMounted(async () => {
         state="empty"
         :message="search || selectedTagIds.length ? 'Змініть пошуковий запит або обрані фільтри.' : `У розділі «${selectedCollection === 'textbook' ? 'Підручники' : 'Література'}» поки немає записів.`"
       />
-      <section v-else class="book-grid" :aria-label="selectedCollection === 'textbook' ? `Підручники для ${selectedGrade} класу` : 'Література'">
-        <BookCard v-for="book in visibleBooks" :key="book.id" :book="book" :can-manage="isAdmin" @edit="openEdit" />
-      </section>
+      <template v-else>
+        <section v-if="displayedBooks.length" class="book-grid" :aria-label="selectedCollection === 'textbook' ? `Підручники для ${selectedGrade} класу` : 'Література'">
+          <BookCard v-for="book in displayedBooks" :key="book.id" :book="book" :can-manage="isAdmin" @edit="openEdit" />
+        </section>
+        <div v-if="hasMoreLiterature" ref="loadMoreSentinel" class="catalog-load-more-sentinel" role="status" aria-label="Завантаження наступних книг"></div>
+        <div v-if="selectedCollection === 'textbook' && unusedBooks.length" class="unused-textbooks-toggle-wrap">
+          <button class="unused-textbooks-toggle" type="button" :aria-expanded="showUnusedTextbooks" @click="showUnusedTextbooks = !showUnusedTextbooks">
+            {{ showUnusedTextbooks ? 'Сховати невикористовувані' : 'Показати невикористовувані' }}
+            <span>{{ unusedBooks.length }}</span>
+          </button>
+        </div>
+      </template>
     </section>
 
     <BookEditorModal

@@ -37,22 +37,27 @@ class BooksController
             $conditions[] = 'total_copies > 0';
         }
 
-        $sql = 'SELECT b.id, b.title, b.year, b.category, b.author, b.cover_path, b.grade, b.pdf_url,
+        $sql = 'SELECT b.id, b.title, b.year, b.category, b.author, b.cover_path, b.grade, b.placement_id, b.is_used,
+                       MAX(p.name) AS placement_name, b.pdf_url,
                        b.total_copies,
                        GREATEST(b.total_copies - COALESCE(SUM(bl.quantity - bl.returned_quantity), 0), 0) AS available_copies,
                        COALESCE(SUM(bl.quantity - bl.returned_quantity), 0) AS active_loans_count,
                        b.created_at, b.updated_at
                 FROM books b
-                LEFT JOIN book_loans bl ON bl.book_id = b.id';
+                LEFT JOIN book_loans bl ON bl.book_id = b.id
+                LEFT JOIN placements p ON p.id = b.placement_id';
         if ($conditions !== []) {
             $sql .= ' WHERE ' . implode(' AND ', array_map(static fn ($item) => 'b.' . $item, $conditions));
         }
-        $sql .= ' GROUP BY b.id ORDER BY b.grade IS NULL, b.grade, b.title, b.id';
+        $sql .= $category === 'literature'
+            ? ' GROUP BY b.id ORDER BY RAND()'
+            : ' GROUP BY b.id ORDER BY b.grade IS NULL, b.grade, b.title, b.id';
 
         $statement = $this->pdo->prepare($sql);
         $statement->execute($parameters);
 
         $books = $statement->fetchAll();
+        $this->normalizePlacements($books);
         $this->attachTags($books);
         if (!$isAdmin) {
             foreach ($books as &$publicBook) {
@@ -79,12 +84,14 @@ class BooksController
     {
         $bookId = $this->parseId($id);
         $statement = $this->pdo->prepare(
-            'SELECT b.id, b.title, b.year, b.category, b.author, b.cover_path, b.grade, b.pdf_url,
+            'SELECT b.id, b.title, b.year, b.category, b.author, b.cover_path, b.grade, b.placement_id, b.is_used,
+                    MAX(p.name) AS placement_name, b.pdf_url,
                     b.total_copies,
                     GREATEST(b.total_copies - COALESCE(SUM(bl.quantity - bl.returned_quantity), 0), 0) AS available_copies,
                     COALESCE(SUM(bl.quantity - bl.returned_quantity), 0) AS active_loans_count,
                     b.created_at, b.updated_at
              FROM books b LEFT JOIN book_loans bl ON bl.book_id = b.id
+             LEFT JOIN placements p ON p.id = b.placement_id
              WHERE b.id = :id GROUP BY b.id'
         );
         $statement->execute(['id' => $bookId]);
@@ -94,6 +101,7 @@ class BooksController
             throw new ApiException('Book not found', 404);
         }
         $books = [$book];
+        $this->normalizePlacements($books);
         $this->attachTags($books);
         $book = $books[0];
         if (empty($_SESSION['admin_authenticated'])) {
@@ -112,8 +120,8 @@ class BooksController
         $this->pdo->beginTransaction();
         try {
             $statement = $this->pdo->prepare(
-                'INSERT INTO books (title, year, category, author, cover_path, grade, pdf_url, total_copies)
-                 VALUES (:title, :year, :category, :author, :cover_path, :grade, :pdf_url, :total_copies)'
+                'INSERT INTO books (title, year, category, author, cover_path, grade, placement_id, is_used, pdf_url, total_copies)
+                 VALUES (:title, :year, :category, :author, :cover_path, :grade, :placement_id, :is_used, :pdf_url, :total_copies)'
             );
             $statement->execute($book);
             $id = (int)$this->pdo->lastInsertId();
@@ -145,7 +153,7 @@ class BooksController
         $statement = $this->pdo->prepare(
             'UPDATE books
              SET title = :title, year = :year, category = :category, author = :author, cover_path = :cover_path,
-                 grade = :grade, pdf_url = :pdf_url, total_copies = :total_copies
+                 grade = :grade, placement_id = :placement_id, is_used = :is_used, pdf_url = :pdf_url, total_copies = :total_copies
              WHERE id = :id'
         );
         $this->pdo->beginTransaction();
@@ -225,6 +233,31 @@ class BooksController
             $grade = null;
         }
 
+        $placementId = null;
+        if ($category === 'literature') {
+            $rawPlacementId = $input['placement_id'] ?? null;
+            if ($rawPlacementId === null || $rawPlacementId === '') {
+                $placementStatement = $this->pdo->prepare("SELECT id FROM placements WHERE name = 'Загальне'");
+                $placementStatement->execute();
+                $placementId = $placementStatement->fetchColumn();
+                if ($placementId === false) throw new ApiException('Розміщення «Загальне» не знайдено', 500);
+                $placementId = (int)$placementId;
+            } else {
+                $placementId = filter_var($rawPlacementId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                if ($placementId === false) throw new ApiException('placement_id must be a positive integer', 400);
+                $placementStatement = $this->pdo->prepare('SELECT 1 FROM placements WHERE id = :id');
+                $placementStatement->execute(['id' => $placementId]);
+                if ($placementStatement->fetchColumn() === false) throw new ApiException('Розміщення не знайдено', 400);
+                $placementId = (int)$placementId;
+            }
+        }
+
+        $isUsed = true;
+        if ($category === 'textbook' && array_key_exists('is_used', $input)) {
+            if (!is_bool($input['is_used'])) throw new ApiException('is_used must be a boolean', 400);
+            $isUsed = $input['is_used'];
+        }
+
         $pdfUrl = $this->optionalText($input, 'pdf_url', 2048);
         if ($pdfUrl !== null) {
             $urlParts = parse_url($pdfUrl);
@@ -268,6 +301,8 @@ class BooksController
             'author' => $author,
             'cover_path' => $coverPath,
             'grade' => $grade,
+            'placement_id' => $placementId,
+            'is_used' => $isUsed ? 1 : 0,
             'pdf_url' => $pdfUrl,
             'total_copies' => $totalCopies,
             'tag_ids' => $tagIds,
@@ -294,6 +329,18 @@ class BooksController
             ];
         }
         foreach ($books as &$book) $book['tags'] = $tagsByBook[(int)$book['id']] ?? [];
+        unset($book);
+    }
+
+    private function normalizePlacements(array &$books): void
+    {
+        foreach ($books as &$book) {
+            $book['placement'] = $book['placement_id'] === null ? null : [
+                'id' => (int)$book['placement_id'],
+                'name' => $book['placement_name'],
+            ];
+            unset($book['placement_name']);
+        }
         unset($book);
     }
 

@@ -10,7 +10,7 @@ class LoansController
         $book = $this->book($bookId);
         $statement = $this->pdo->prepare(
             'SELECT id, book_id, borrower_name, issued_at, quantity, returned_quantity,
-                    quantity - returned_quantity AS remaining_quantity, returned_at,
+                    quantity - returned_quantity AS remaining_quantity, returned_at, notes,
                     CASE WHEN returned_quantity >= quantity THEN "returned"
                          WHEN returned_quantity > 0 THEN "partial" ELSE "active" END AS status,
                     created_at, updated_at
@@ -43,10 +43,10 @@ class LoansController
 
             $legacyDueDate = $this->hasLegacyDueDateColumn();
             $statement = $this->pdo->prepare($legacyDueDate
-                ? 'INSERT INTO book_loans (book_id, borrower_name, issued_at, due_at, quantity)
-                   VALUES (:book_id, :borrower_name, :issued_at, :due_at, :quantity)'
-                : 'INSERT INTO book_loans (book_id, borrower_name, issued_at, quantity)
-                   VALUES (:book_id, :borrower_name, :issued_at, :quantity)'
+                ? 'INSERT INTO book_loans (book_id, borrower_name, issued_at, due_at, quantity, notes)
+                   VALUES (:book_id, :borrower_name, :issued_at, :due_at, :quantity, :notes)'
+                : 'INSERT INTO book_loans (book_id, borrower_name, issued_at, quantity, notes)
+                   VALUES (:book_id, :borrower_name, :issued_at, :quantity, :notes)'
             );
             $parameters = ['book_id' => $id] + $input;
             if ($legacyDueDate) $parameters['due_at'] = $input['issued_at'];
@@ -92,7 +92,7 @@ class LoansController
             $statement = $this->pdo->prepare(
                 'UPDATE book_loans
                  SET borrower_name = :borrower_name, issued_at = :issued_at, quantity = :quantity,
-                     returned_quantity = :returned_quantity, returned_at = :returned_at
+                     returned_quantity = :returned_quantity, returned_at = :returned_at, notes = :notes
                  WHERE id = :id'
             );
             $statement->execute($input + ['returned_at' => $returnedAt, 'id' => $id]);
@@ -147,7 +147,7 @@ class LoansController
     {
         $statement = $this->pdo->prepare(
             'SELECT id, book_id, borrower_name, issued_at, quantity, returned_quantity,
-                    quantity - returned_quantity AS remaining_quantity, returned_at,
+                    quantity - returned_quantity AS remaining_quantity, returned_at, notes,
                     CASE WHEN returned_quantity >= quantity THEN "returned"
                          WHEN returned_quantity > 0 THEN "partial" ELSE "active" END AS status
              FROM book_loans WHERE id = :id'
@@ -161,11 +161,18 @@ class LoansController
     private function book(string $id): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, title, year, category, author, cover_path, grade, pdf_url, total_copies FROM books WHERE id = :id'
+            'SELECT b.id, b.title, b.year, b.category, b.author, b.cover_path, b.grade, b.placement_id, b.is_used,
+                    p.name AS placement_name, b.pdf_url, b.total_copies
+             FROM books b LEFT JOIN placements p ON p.id = b.placement_id WHERE b.id = :id'
         );
         $statement->execute(['id' => $this->parseId($id, 'Book')]);
         $book = $statement->fetch();
         if ($book === false) throw new ApiException('Книгу не знайдено', 404);
+        $book['placement'] = $book['placement_id'] === null ? null : [
+            'id' => (int)$book['placement_id'],
+            'name' => $book['placement_name'],
+        ];
+        unset($book['placement_name']);
         $tags = $this->pdo->prepare(
             'SELECT t.id, t.name, t.color FROM book_tags bt JOIN tags t ON t.id = bt.tag_id WHERE bt.book_id = :id ORDER BY t.name, t.id'
         );
@@ -201,6 +208,7 @@ class LoansController
             'borrower_name' => $name,
             'issued_at' => $issuedAt,
             'quantity' => $quantity,
+            'notes' => $this->optionalNotes($input['notes'] ?? null),
         ];
         if ($includeReturnedQuantity) {
             $returnedQuantity = filter_var($input['returned_quantity'] ?? 0, FILTER_VALIDATE_INT);
@@ -210,6 +218,15 @@ class LoansController
             $result['returned_quantity'] = $returnedQuantity;
         }
         return $result;
+    }
+
+    private function optionalNotes(mixed $value): ?string
+    {
+        if ($value === null) return null;
+        if (!is_string($value)) throw new ApiException('Примітки мають бути текстом', 400);
+        $notes = trim($value);
+        if (mb_strlen($notes, 'UTF-8') > 10000) throw new ApiException('Примітки не можуть перевищувати 10000 символів', 400);
+        return $notes === '' ? null : $notes;
     }
 
     private function positiveQuantity(mixed $value, string $label): int

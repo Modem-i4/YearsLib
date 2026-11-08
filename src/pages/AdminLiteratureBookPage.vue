@@ -22,6 +22,7 @@ const returning = ref(false)
 const returningLoan = ref(null)
 const returnForm = ref({ quantity: 1, returned_at: localDate() })
 const bookEditorOpen = ref(false)
+const expandedNotes = ref(new Set())
 
 function localDate() {
   const now = new Date()
@@ -30,16 +31,18 @@ function localDate() {
 
 function emptyLoan() {
   const issued = localDate()
-  return { borrower_name: '', issued_at: issued, quantity: 1 }
+  return { borrower_name: '', issued_at: issued, quantity: 1, notes: '' }
 }
 
 const visibleLoans = computed(() => filter.value === 'active'
   ? loans.value.filter((loan) => Number(loan.remaining_quantity) > 0)
   : loans.value)
 
+const hasVisibleNotes = computed(() => visibleLoans.value.some((loan) => loan.notes?.trim()))
+
 const bookHeadingDetails = computed(() => {
   if (!book.value) return ''
-  return [book.value.year, book.value.grade ? `${book.value.grade} клас` : null].filter(Boolean).join(', ')
+  return [book.value.year, book.value.grade ? `${book.value.grade} клас` : book.value.placement?.name].filter(Boolean).join(', ')
 })
 
 const borrowerSuggestions = computed(() => {
@@ -106,6 +109,7 @@ function openEdit(loan) {
     issued_at: loan.issued_at,
     quantity: Number(loan.quantity),
     returned_quantity: Number(loan.returned_quantity),
+    notes: loan.notes ?? '',
   }
   error.value = ''
   editorOpen.value = true
@@ -179,6 +183,16 @@ function statusLabel(status) {
   return { active: 'Видано', partial: 'Частково повернено', returned: 'Повернено' }[status] ?? status
 }
 
+function isLongNote(note) {
+  return note.length > 100 || (note.match(/\n/g)?.length ?? 0) >= 2
+}
+
+function toggleNote(id) {
+  const next = new Set(expandedNotes.value)
+  next.has(id) ? next.delete(id) : next.add(id)
+  expandedNotes.value = next
+}
+
 onMounted(initialize)
 </script>
 
@@ -220,10 +234,11 @@ onMounted(initialize)
         <div v-if="visibleLoans.length === 0" class="admin-table-state">Записів видачі немає.</div>
         <div v-else class="loan-table-wrap">
           <table class="loan-table">
-            <thead><tr><th>Хто взяв</th><th>Дата видачі</th><th>Примірники</th><th>Дата повернення</th><th>Статус</th><th>Дії</th></tr></thead>
+            <thead><tr><th>Хто взяв</th><th>Дата видачі</th><th>Примірники</th><th>Дата повернення</th><th v-if="hasVisibleNotes">Примітки</th><th>Статус</th><th>Дії</th></tr></thead>
             <tbody>
               <tr v-for="loan in visibleLoans" :key="loan.id">
                 <td data-label="Хто взяв">{{ loan.borrower_name }}</td><td data-label="Дата видачі">{{ formatDate(loan.issued_at) }}</td><td data-label="Примірники">{{ loan.returned_quantity }}/{{ loan.quantity }} повернено</td><td data-label="Дата повернення">{{ formatDate(loan.returned_at) }}</td>
+                <td v-if="hasVisibleNotes" data-label="Примітки" class="loan-note-cell"><template v-if="loan.notes"><p class="loan-note" :class="{ collapsed: isLongNote(loan.notes) && !expandedNotes.has(loan.id) }">{{ loan.notes }}</p><button v-if="isLongNote(loan.notes)" class="loan-note-toggle" type="button" :aria-expanded="expandedNotes.has(loan.id)" @click="toggleNote(loan.id)">{{ expandedNotes.has(loan.id) ? 'Згорнути' : 'Розгорнути' }}</button></template><span v-else>—</span></td>
                 <td data-label="Статус"><span class="loan-status" :class="loan.status">{{ statusLabel(loan.status) }}</span></td>
                 <td data-label="Дії"><div class="loan-actions"><button class="admin-secondary-button" type="button" @click="openEdit(loan)">Редагувати</button><button v-if="Number(loan.remaining_quantity) > 0" class="admin-primary-button" type="button" @click="returnBook(loan)">Повернути</button></div></td>
               </tr>
@@ -241,6 +256,7 @@ onMounted(initialize)
           <label class="admin-field"><span>Дата видачі <b>*</b></span><input v-model="form.issued_at" type="date" required></label>
           <label class="admin-field"><span>Скільки видано <b>*</b></span><input v-model="form.quantity" type="number" min="1" max="65535" inputmode="numeric" required></label>
           <label v-if="editingId" class="admin-field"><span>Скільки повернено <b>*</b></span><input v-model="form.returned_quantity" type="number" min="0" :max="form.quantity" inputmode="numeric" required></label>
+          <label class="admin-field"><span>Примітки</span><textarea v-model="form.notes" maxlength="10000" rows="4" placeholder="Додаткова інформація про видачу"></textarea></label>
           <p v-if="error" class="admin-error" role="alert">{{ error }}</p>
           <footer class="admin-form-actions"><button class="admin-secondary-button" type="button" :disabled="saving" @click="editorOpen = false">Скасувати</button><button class="admin-primary-button" type="submit" :disabled="saving">{{ saving ? 'Збереження…' : 'Зберегти' }}</button></footer>
         </form>

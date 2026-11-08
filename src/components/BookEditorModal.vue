@@ -17,6 +17,12 @@ const coverPreview = ref(props.book?.cover_path ?? '')
 const fileInput = ref(null)
 const tags = ref([])
 const tagsOpen = ref(false)
+const placements = ref([])
+const placementsOpen = ref(false)
+const editingPlacementId = ref(null)
+const placementDraft = ref('')
+const placementInput = ref(null)
+const placementField = ref(null)
 const editingTagId = ref(null)
 const tagDraft = ref('')
 const tagColor = ref('blue')
@@ -31,6 +37,8 @@ const form = ref({
   category: props.book?.category ?? props.defaultCategory,
   author: props.book?.author ?? '',
   grade: props.book?.grade ?? (props.defaultCategory === 'textbook' ? (props.defaultGrade ?? '') : ''),
+  is_used: props.book?.is_used === undefined ? true : Boolean(Number(props.book.is_used)),
+  placement_id: props.book?.placement?.id ? Number(props.book.placement.id) : '',
   pdf_url: props.book?.pdf_url ?? '',
   cover_path: props.book?.cover_path ?? '',
   total_copies: Number(props.book?.total_copies ?? 1),
@@ -38,6 +46,7 @@ const form = ref({
 })
 const isEditing = computed(() => form.value.id !== null)
 const selectedTags = computed(() => tags.value.filter((tag) => form.value.tag_ids.includes(Number(tag.id))))
+const selectedPlacement = computed(() => placements.value.find((placement) => Number(placement.id) === Number(form.value.placement_id)))
 
 function close() {
   if (saving.value || deleting.value || coverBusy.value) return
@@ -126,6 +135,89 @@ function closeTagsOnOutsideClick(event) {
   if (tagsOpen.value && !tagField.value?.contains(event.target)) {
     tagsOpen.value = false
     cancelTagEdit()
+  }
+  if (placementsOpen.value && !placementField.value?.contains(event.target)) {
+    placementsOpen.value = false
+    cancelPlacementEdit()
+  }
+}
+
+async function focusPlacementInput() {
+  await nextTick()
+  placementInput.value?.focus()
+  placementInput.value?.select()
+}
+
+function setPlacementInput(element) {
+  if (element) placementInput.value = element
+}
+
+function startAddPlacement() {
+  editingPlacementId.value = 'new'
+  placementDraft.value = ''
+  focusPlacementInput()
+}
+
+function startEditPlacement(placement) {
+  editingPlacementId.value = Number(placement.id)
+  placementDraft.value = placement.name
+  focusPlacementInput()
+}
+
+function cancelPlacementEdit() {
+  editingPlacementId.value = null
+  placementDraft.value = ''
+}
+
+function selectPlacement(placementId) {
+  form.value.placement_id = Number(placementId)
+  placementsOpen.value = false
+  cancelPlacementEdit()
+}
+
+function sortPlacements() {
+  placements.value.sort((left, right) => {
+    if (left.name === 'Загальне') return -1
+    if (right.name === 'Загальне') return 1
+    return left.name.localeCompare(right.name, 'uk', { numeric: true })
+  })
+}
+
+async function savePlacement() {
+  const name = placementDraft.value.trim()
+  if (!name) return
+  editorError.value = ''
+  try {
+    const isNew = editingPlacementId.value === 'new'
+    const result = await api(isNew ? '/api/admin/placements' : `/api/admin/placements/${editingPlacementId.value}`, {
+      method: isNew ? 'POST' : 'PUT',
+      body: JSON.stringify({ name }),
+    })
+    if (isNew) {
+      placements.value.push(result.data)
+      form.value.placement_id = Number(result.data.id)
+    } else {
+      const placement = placements.value.find((item) => Number(item.id) === Number(result.data.id))
+      if (placement) Object.assign(placement, result.data)
+    }
+    sortPlacements()
+    cancelPlacementEdit()
+  } catch (error) {
+    editorError.value = error.message
+  }
+}
+
+async function deletePlacement(placement) {
+  editorError.value = ''
+  try {
+    await api(`/api/admin/placements/${placement.id}`, { method: 'DELETE' })
+    placements.value = placements.value.filter((item) => Number(item.id) !== Number(placement.id))
+    if (Number(form.value.placement_id) === Number(placement.id)) {
+      form.value.placement_id = Number(placements.value.find((item) => item.name === 'Загальне')?.id ?? '')
+    }
+    if (editingPlacementId.value === Number(placement.id)) cancelPlacementEdit()
+  } catch (error) {
+    editorError.value = error.message
   }
 }
 
@@ -218,6 +310,8 @@ async function save() {
     category: form.value.category,
     author: form.value.author.trim() || null,
     grade: form.value.category === 'textbook' && form.value.grade !== '' ? Number(form.value.grade) : null,
+    is_used: form.value.category === 'textbook' ? form.value.is_used : true,
+    placement_id: form.value.category === 'literature' && form.value.placement_id !== '' ? Number(form.value.placement_id) : null,
     pdf_url: form.value.pdf_url.trim() || null,
     cover_path: form.value.cover_path || null,
     total_copies: Number(form.value.total_copies),
@@ -242,6 +336,11 @@ onMounted(async () => {
   try {
     const result = await api('/api/admin/tags')
     tags.value = result.data ?? []
+    const placementResult = await api('/api/admin/placements')
+    placements.value = placementResult.data ?? []
+    if (!form.value.placement_id) {
+      form.value.placement_id = Number(placements.value.find((placement) => placement.name === 'Загальне')?.id ?? '')
+    }
   } catch (error) {
     editorError.value = error.message
   }
@@ -271,7 +370,43 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
         <div class="admin-form-grid">
           <label class="admin-field"><span>Автор</span><input v-model="form.author" maxlength="190"></label>
           <label v-if="form.category === 'textbook'" class="admin-field"><span>Клас</span><select v-model="form.grade"><option value="">Не вказано</option><option v-for="grade in 11" :key="grade" :value="String(grade)">{{ grade }} клас</option></select></label>
+          <div v-else ref="placementField" class="admin-field tag-field">
+            <span>Розміщення</span>
+            <button class="tag-select-trigger" type="button" :aria-expanded="placementsOpen" @click="placementsOpen = !placementsOpen">
+              <span :class="{ 'tag-select-placeholder': !selectedPlacement }">{{ selectedPlacement?.name || 'Оберіть розміщення' }}</span>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4" /></svg>
+            </button>
+            <div v-if="placementsOpen" class="tag-dropdown">
+              <button class="tag-add-button" type="button" @click="startAddPlacement">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
+                Додати
+              </button>
+              <div v-if="editingPlacementId === 'new'" class="tag-edit-row">
+                <input :ref="setPlacementInput" v-model="placementDraft" maxlength="80" placeholder="Нове розміщення" @keydown.enter.prevent="savePlacement" @keydown.esc="cancelPlacementEdit">
+                <button type="button" aria-label="Зберегти розміщення" title="Зберегти" @click="savePlacement">✓</button>
+                <button type="button" aria-label="Скасувати" title="Скасувати" @click="cancelPlacementEdit">×</button>
+              </div>
+              <div v-for="placement in placements" :key="placement.id" class="tag-option-row">
+                <div v-if="editingPlacementId === Number(placement.id)" class="tag-edit-row">
+                  <input :ref="setPlacementInput" v-model="placementDraft" maxlength="80" @keydown.enter.prevent="savePlacement" @keydown.esc="cancelPlacementEdit">
+                  <button type="button" aria-label="Зберегти розміщення" title="Зберегти" @click="savePlacement">✓</button>
+                  <button type="button" aria-label="Скасувати" title="Скасувати" @click="cancelPlacementEdit">×</button>
+                </div>
+                <template v-else>
+                  <label class="tag-option"><input type="radio" name="placement" :checked="Number(form.placement_id) === Number(placement.id)" @change="selectPlacement(placement.id)"><span>{{ placement.name }}</span></label>
+                  <template v-if="placement.name !== 'Загальне'">
+                    <button class="tag-row-action" type="button" aria-label="Редагувати розміщення" title="Редагувати" @click="startEditPlacement(placement)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M13.8 3.2a1.8 1.8 0 0 1 2.5 2.5L7 15l-3 .8.8-3Z" /></svg></button>
+                    <button class="tag-row-action danger" type="button" aria-label="Видалити розміщення" title="Видалити" @click="deletePlacement(placement)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 6 8 8M14 6l-8 8" /></svg></button>
+                  </template>
+                </template>
+              </div>
+            </div>
+          </div>
         </div>
+        <label v-if="form.category === 'textbook'" class="admin-checkbox-field">
+          <input v-model="form.is_used" type="checkbox">
+          <span>Підручник використовується</span>
+        </label>
         <div v-if="form.category === 'literature'" ref="tagField" class="admin-field tag-field">
           <span>Теги</span>
           <button class="tag-select-trigger" type="button" :aria-expanded="tagsOpen" @click="tagsOpen = !tagsOpen">

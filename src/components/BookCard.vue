@@ -83,11 +83,14 @@ const embeddedViewer = usesEmbeddedViewer(props.book.pdf_url)
       <h3>{{ book.title }}<span v-if="book.year"> ({{ book.year }})</span></h3>
       <div class="book-meta-row">
         <p>{{ book.author || 'Автор не вказаний' }}</p>
-        <span v-if="book.grade" class="book-grade">{{ book.grade }} клас</span>
+        <span v-if="book.category === 'literature' && book.placement?.name !== 'Загальне'" class="book-grade">{{ book.placement?.name }}</span>
       </div>
       <div v-if="book.tags?.length" class="book-tags"><span v-for="tag in book.tags" :key="tag.id" class="book-tag" :class="`tag-color-${tag.color || 'blue'}`">{{ tag.name }}</span></div>
       <span class="book-format" :class="{ 'has-pdf': pdfUrl }">
         {{ pdfUrl ? 'PDF' : 'Книга' }}
+      </span>
+      <span v-if="book.category === 'textbook' && !Boolean(Number(book.is_used))" class="book-unused-status">
+        Не використовується
       </span>
       <span
         v-if="book.category === 'literature' || canManage"
