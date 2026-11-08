@@ -59,6 +59,7 @@ $routes = [
     ],
     'DELETE' => [
         '/api/books/{id}' => static fn (string $id): array => $booksController()->delete($id),
+        '/api/admin/loans/{loanId}' => static fn (string $loanId): array => $loansController()->delete($loanId),
         '/api/admin/tags/{tagId}' => static fn (string $tagId): array => $tagsController()->delete($tagId),
         '/api/admin/placements/{placementId}' => static fn (string $placementId): array => $placementsController()->delete($placementId),
     ],

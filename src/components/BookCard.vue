@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { coverPalette, externalPdfUrl, usesEmbeddedViewer } from '../utils/bookPresentation.js'
 
 const props = defineProps({
@@ -11,11 +11,23 @@ const emit = defineEmits(['edit'])
 const coverFailed = ref(false)
 const pdfUrl = externalPdfUrl(props.book.pdf_url)
 const embeddedViewer = usesEmbeddedViewer(props.book.pdf_url)
+const adminLiteratureCard = computed(() => props.canManage && props.book.category === 'literature')
+const adminLoanHref = `/admin/books/${props.book.id}`
+
+function openAdminLoans(event) {
+  if (!adminLiteratureCard.value || event.target.closest('a, button, input, select, textarea')) return
+  window.location.assign(adminLoanHref)
+}
 </script>
 
 <template>
   <article
     class="book-card"
+    :class="{ 'book-card-admin-link': adminLiteratureCard }"
+    :role="adminLiteratureCard ? 'link' : undefined"
+    :tabindex="adminLiteratureCard ? 0 : undefined"
+    @click="openAdminLoans"
+    @keydown.enter="openAdminLoans"
   >
     <button
       v-if="canManage"
@@ -30,7 +42,7 @@ const embeddedViewer = usesEmbeddedViewer(props.book.pdf_url)
       </svg>
     </button>
     <a
-      v-if="canManage"
+      v-if="canManage && book.category !== 'literature'"
       class="book-admin-loan"
       :href="`/admin/books/${book.id}`"
       :aria-label="`Видати ${book.title}`"
@@ -41,10 +53,10 @@ const embeddedViewer = usesEmbeddedViewer(props.book.pdf_url)
     <a
       v-if="pdfUrl"
       class="book-cover-link"
-      :href="embeddedViewer ? `/book/${book.id}` : pdfUrl"
-      :target="!embeddedViewer ? '_blank' : undefined"
-      :rel="!embeddedViewer ? 'noopener noreferrer' : undefined"
-      :aria-label="embeddedViewer ? `Переглянути книгу «${book.title}»` : `Відкрити книгу «${book.title}» у новій вкладці`"
+      :href="adminLiteratureCard ? adminLoanHref : (embeddedViewer ? `/book/${book.id}` : pdfUrl)"
+      :target="!adminLiteratureCard && !embeddedViewer ? '_blank' : undefined"
+      :rel="!adminLiteratureCard && !embeddedViewer ? 'noopener noreferrer' : undefined"
+      :aria-label="adminLiteratureCard ? `Перейти до обліку видачі «${book.title}»` : (embeddedViewer ? `Переглянути книгу «${book.title}»` : `Відкрити книгу «${book.title}» у новій вкладці`)"
     >
       <div class="book-cover" :class="`cover-${coverPalette(book)}`">
         <img

@@ -14,6 +14,7 @@ const people = ref([])
 const filter = ref('active')
 const editorOpen = ref(false)
 const saving = ref(false)
+const deleting = ref(false)
 const editingId = ref(null)
 const form = ref(emptyLoan())
 const borrowerSuggestionsOpen = ref(false)
@@ -129,6 +130,22 @@ async function saveLoan() {
     error.value = caught.message
   } finally {
     saving.value = false
+  }
+}
+
+async function deleteLoan() {
+  if (!editingId.value || !window.confirm(`Видалити запис про видачу для «${form.value.borrower_name}»? Цю дію неможливо скасувати.`)) return
+  deleting.value = true
+  error.value = ''
+  try {
+    await api(`/api/admin/loans/${editingId.value}`, { method: 'DELETE' })
+    editorOpen.value = false
+    editingId.value = null
+    await load()
+  } catch (caught) {
+    error.value = caught.message
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -248,9 +265,17 @@ onMounted(initialize)
       </template>
     </section>
 
-    <div v-if="editorOpen" class="admin-modal-backdrop" @click.self="!saving && (editorOpen = false)">
+    <div v-if="editorOpen" class="admin-modal-backdrop" @click.self="!saving && !deleting && (editorOpen = false)">
       <section class="admin-modal loan-modal" role="dialog" aria-modal="true">
-        <header class="admin-modal-header"><div><p class="admin-eyebrow">{{ editingId ? 'РЕДАГУВАННЯ' : 'НОВА ВИДАЧА' }}</p><h2>{{ editingId ? 'Редагувати запис' : 'Видати книгу' }}</h2></div><button class="admin-icon-button" type="button" @click="editorOpen = false">×</button></header>
+        <header class="admin-modal-header">
+          <div><p class="admin-eyebrow">{{ editingId ? 'РЕДАГУВАННЯ' : 'НОВА ВИДАЧА' }}</p><h2>{{ editingId ? 'Редагувати запис' : 'Видати книгу' }}</h2></div>
+          <div class="admin-modal-header-actions">
+            <button v-if="editingId" class="admin-icon-button admin-delete-book" type="button" :disabled="saving || deleting" aria-label="Видалити запис" title="Видалити запис" @click="deleteLoan">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></svg>
+            </button>
+            <button class="admin-icon-button" type="button" :disabled="saving || deleting" aria-label="Закрити" title="Закрити" @click="editorOpen = false">×</button>
+          </div>
+        </header>
         <form class="admin-book-form" @submit.prevent="saveLoan">
           <div class="admin-field"><label for="borrower-name">Хто взяв <b>*</b></label><span class="borrower-combobox"><input id="borrower-name" v-model="form.borrower_name" maxlength="190" autocomplete="off" role="combobox" aria-autocomplete="list" :aria-expanded="borrowerSuggestionsOpen && borrowerSuggestions.length > 0" required autofocus @focus="borrowerSuggestionsOpen = true" @input="borrowerSuggestionsOpen = true" @keydown.esc="borrowerSuggestionsOpen = false" @blur="borrowerSuggestionsOpen = false"><span v-if="borrowerSuggestionsOpen && borrowerSuggestions.length" class="borrower-suggestions" role="listbox"><button v-for="person in borrowerSuggestions" :key="person" type="button" role="option" @mousedown.prevent="selectBorrower(person)">{{ person }}</button></span></span></div>
           <label class="admin-field"><span>Дата видачі <b>*</b></span><input v-model="form.issued_at" type="date" required></label>
@@ -258,7 +283,7 @@ onMounted(initialize)
           <label v-if="editingId" class="admin-field"><span>Скільки повернено <b>*</b></span><input v-model="form.returned_quantity" type="number" min="0" :max="form.quantity" inputmode="numeric" required></label>
           <label class="admin-field"><span>Примітки</span><textarea v-model="form.notes" maxlength="10000" rows="4" placeholder="Додаткова інформація про видачу"></textarea></label>
           <p v-if="error" class="admin-error" role="alert">{{ error }}</p>
-          <footer class="admin-form-actions"><button class="admin-secondary-button" type="button" :disabled="saving" @click="editorOpen = false">Скасувати</button><button class="admin-primary-button" type="submit" :disabled="saving">{{ saving ? 'Збереження…' : 'Зберегти' }}</button></footer>
+          <footer class="admin-form-actions"><button class="admin-secondary-button" type="button" :disabled="saving || deleting" @click="editorOpen = false">Скасувати</button><button class="admin-primary-button" type="submit" :disabled="saving || deleting">{{ saving ? 'Збереження…' : (deleting ? 'Видалення…' : 'Зберегти') }}</button></footer>
         </form>
       </section>
     </div>

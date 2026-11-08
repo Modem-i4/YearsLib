@@ -616,6 +616,8 @@ textarea:focus-visible {
   gap: 30px 18px;
   padding-top: 25px;
 }
+.book-card-admin-link { cursor: pointer; }
+.book-card-admin-link:focus-visible { outline: 3px solid #39806a; outline-offset: 5px; }
 
 .book-card {
   position: relative;

@@ -143,6 +143,27 @@ class LoansController
         }
     }
 
+    public function delete(string $loanId): array
+    {
+        $this->authorize();
+        $id = $this->parseId($loanId, 'Loan');
+        $this->pdo->beginTransaction();
+        try {
+            $loan = $this->pdo->prepare('SELECT id FROM book_loans WHERE id = :id FOR UPDATE');
+            $loan->execute(['id' => $id]);
+            if ($loan->fetchColumn() === false) throw new ApiException('Запис видачі не знайдено', 404);
+
+            $statement = $this->pdo->prepare('DELETE FROM book_loans WHERE id = :id');
+            $statement->execute(['id' => $id]);
+            $this->pdo->commit();
+        } catch (Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        }
+
+        return ['ok' => true];
+    }
+
     private function show(int $id): array
     {
         $statement = $this->pdo->prepare(
