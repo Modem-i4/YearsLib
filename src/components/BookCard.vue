@@ -109,7 +109,7 @@ function openAdminLoans(event) {
         class="book-availability"
         :class="{ empty: Number(book.available_copies) === 0 }"
       >
-        {{ Number(book.available_copies) === 0 ? 'Немає в наявності' : `Наявність: ${book.available_copies}/${book.total_copies}` }}
+        Наявність: {{book.available_copies}}/{{book.total_copies}}
       </span>
     </div>
   </article>
