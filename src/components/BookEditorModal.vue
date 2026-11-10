@@ -13,9 +13,11 @@ const saving = ref(false)
 const deleting = ref(false)
 const editorError = ref('')
 const coverBusy = ref(false)
+const pdfBusy = ref(false)
 const coverPreview = ref(props.book?.cover_path ?? '')
 const fileInput = ref(null)
 const cameraInput = ref(null)
+const pdfInput = ref(null)
 const tags = ref([])
 const tagsOpen = ref(false)
 const placements = ref([])
@@ -50,7 +52,7 @@ const selectedTags = computed(() => tags.value.filter((tag) => form.value.tag_id
 const selectedPlacement = computed(() => placements.value.find((placement) => Number(placement.id) === Number(form.value.placement_id)))
 
 function close() {
-  if (saving.value || deleting.value || coverBusy.value) return
+  if (saving.value || deleting.value || coverBusy.value || pdfBusy.value) return
   if (coverPreview.value.startsWith('blob:')) URL.revokeObjectURL(coverPreview.value)
   emit('close')
 }
@@ -302,6 +304,32 @@ async function uploadCover(event) {
   }
 }
 
+async function uploadPdf(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+
+  if (file.size > 35 * 1024 * 1024) {
+    editorError.value = 'PDF-файл має бути меншим за 35 МБ.'
+    return
+  }
+
+  pdfBusy.value = true
+  editorError.value = ''
+  try {
+    const body = new FormData()
+    body.append('pdf', file)
+    body.append('title', form.value.title.trim())
+    if (form.value.category === 'textbook' && form.value.grade !== '') body.append('grade', String(form.value.grade))
+    const result = await api('/api/admin/pdfs', { method: 'POST', body })
+    form.value.pdf_url = result.pdf_url
+  } catch (error) {
+    editorError.value = error.message || 'Не вдалося завантажити PDF.'
+  } finally {
+    pdfBusy.value = false
+  }
+}
+
 async function save() {
   saving.value = true
   editorError.value = ''
@@ -356,10 +384,10 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
       <header class="admin-modal-header">
         <div><p class="admin-eyebrow">{{ isEditing ? 'РЕДАГУВАННЯ' : 'НОВИЙ ЗАПИС' }}</p><h2 id="book-editor-title">{{ isEditing ? 'Редагувати книгу' : 'Додати книгу' }}</h2></div>
         <div class="admin-modal-header-actions">
-          <button v-if="isEditing" class="admin-icon-button admin-delete-book" type="button" :disabled="saving || deleting || coverBusy" aria-label="Видалити книгу" title="Видалити книгу" @click="deleteBook">
+          <button v-if="isEditing" class="admin-icon-button admin-delete-book" type="button" :disabled="saving || deleting || coverBusy || pdfBusy" aria-label="Видалити книгу" title="Видалити книгу" @click="deleteBook">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></svg>
           </button>
-          <button class="admin-icon-button" type="button" :disabled="saving || deleting || coverBusy" aria-label="Закрити" title="Закрити" @click="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+          <button class="admin-icon-button" type="button" :disabled="saving || deleting || coverBusy || pdfBusy" aria-label="Закрити" title="Закрити" @click="close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
         </div>
       </header>
       <form class="admin-book-form" @submit.prevent="save">
@@ -446,7 +474,16 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
           </div>
         </div>
         <label class="admin-field"><span>Кількість примірників</span><input v-model="form.total_copies" type="number" min="0" max="65535" inputmode="numeric" required></label>
-        <label class="admin-field"><span>Зовнішнє посилання на PDF</span><input v-model="form.pdf_url" type="url" placeholder="https://…"></label>
+        <div class="admin-field">
+          <label for="book-pdf-url">Зовнішнє посилання на PDF</label>
+          <span class="admin-input-with-action">
+            <input id="book-pdf-url" v-model="form.pdf_url" type="text" inputmode="url" placeholder="https://…" :disabled="pdfBusy">
+            <button class="admin-input-action" type="button" :disabled="pdfBusy" :aria-label="pdfBusy ? 'Завантаження PDF' : 'Прикріпити PDF-файл'" :title="pdfBusy ? 'Завантаження…' : 'Прикріпити PDF-файл'" @click.prevent="pdfInput?.click()">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.5 11.5-8.7 8.7a5 5 0 0 1-7.1-7.1l9.2-9.2a3.5 3.5 0 0 1 5 5l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.7-8.7" /></svg>
+            </button>
+            <input ref="pdfInput" class="visually-hidden" type="file" accept="application/pdf,.pdf" @change="uploadPdf">
+          </span>
+        </div>
         <div class="admin-field">
           <span>Обкладинка</span>
           <div class="admin-cover-field">
@@ -467,7 +504,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
           </div>
         </div>
         <p v-if="editorError" class="admin-error" role="alert">{{ editorError }}</p>
-        <footer class="admin-form-actions"><button class="admin-secondary-button" type="button" :disabled="saving || deleting || coverBusy" @click="close">Скасувати</button><button class="admin-primary-button" type="submit" :disabled="saving || deleting || coverBusy">{{ saving ? 'Збереження…' : (isEditing ? 'Зберегти зміни' : 'Додати книгу') }}</button></footer>
+        <footer class="admin-form-actions"><button class="admin-secondary-button" type="button" :disabled="saving || deleting || coverBusy || pdfBusy" @click="close">Скасувати</button><button class="admin-primary-button" type="submit" :disabled="saving || deleting || coverBusy || pdfBusy">{{ saving ? 'Збереження…' : (isEditing ? 'Зберегти зміни' : 'Додати книгу') }}</button></footer>
       </form>
     </section>
   </div>

@@ -46,6 +46,7 @@ $routes = [
         '/api/admin/login' => [$adminController, 'login'],
         '/api/admin/logout' => [$adminController, 'logout'],
         '/api/admin/covers' => [$adminController, 'uploadCover'],
+        '/api/admin/pdfs' => [$adminController, 'uploadPdf'],
         '/api/books' => static fn (): array => $booksController()->create(),
         '/api/admin/books/{bookId}/loans' => static fn (string $bookId): array => $loansController()->create($bookId),
         '/api/admin/loans/{loanId}/return' => static fn (string $loanId): array => $loansController()->returnBook($loanId),

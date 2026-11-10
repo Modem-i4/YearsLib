@@ -1,6 +1,7 @@
 /node_modules/
 /public/build/
 /public/assets/covers/*
+/public/assets/pdfs/*
 /vendor/
 .env
 .env.*

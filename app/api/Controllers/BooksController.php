@@ -142,6 +142,7 @@ class BooksController
         $tagIds = $book['tag_ids'];
         unset($book['tag_ids']);
         $book['id'] = $bookId;
+        $previousPdfUrl = null;
 
         $activeStatement = $this->pdo->prepare('SELECT COALESCE(SUM(quantity - returned_quantity), 0) FROM book_loans WHERE book_id = :id');
         $activeStatement->execute(['id' => $bookId]);
@@ -158,12 +159,22 @@ class BooksController
         );
         $this->pdo->beginTransaction();
         try {
+            $currentBook = $this->pdo->prepare('SELECT pdf_url FROM books WHERE id = :id FOR UPDATE');
+            $currentBook->execute(['id' => $bookId]);
+            $previousPdfUrl = $currentBook->fetchColumn();
+            if ($previousPdfUrl === false) {
+                throw new ApiException('Книгу не знайдено', 404);
+            }
             $statement->execute($book);
             $this->syncTags($bookId, $tagIds);
             $this->pdo->commit();
         } catch (Throwable $error) {
             if ($this->pdo->inTransaction()) $this->pdo->rollBack();
             throw $error;
+        }
+
+        if ($previousPdfUrl !== $book['pdf_url']) {
+            $this->deleteLocalPdfIfUnused(is_string($previousPdfUrl) ? $previousPdfUrl : null);
         }
 
         return $this->show((string)$bookId);
@@ -261,15 +272,16 @@ class BooksController
         $pdfUrl = $this->optionalText($input, 'pdf_url', 2048);
         if ($pdfUrl !== null) {
             $urlParts = parse_url($pdfUrl);
-            if (
+            $isLocalPdf = preg_match('~^/assets/pdfs/(?:[a-f0-9]{32}|[a-z0-9][a-z0-9-]{0,79}-[a-f0-9]{6})\.pdf$~', $pdfUrl) === 1;
+            $isInvalidExternalPdf =
                 filter_var($pdfUrl, FILTER_VALIDATE_URL) === false ||
                 !is_array($urlParts) ||
                 strtolower($urlParts['scheme'] ?? '') !== 'https' ||
                 empty($urlParts['host']) ||
                 isset($urlParts['user']) ||
-                isset($urlParts['pass'])
-            ) {
-                throw new ApiException('pdf_url must be a valid HTTPS URL or null', 400);
+                isset($urlParts['pass']);
+            if (!$isLocalPdf && $isInvalidExternalPdf) {
+                throw new ApiException('pdf_url must be a valid HTTPS URL, an uploaded PDF path, or null', 400);
             }
         }
 
@@ -307,6 +319,29 @@ class BooksController
             'total_copies' => $totalCopies,
             'tag_ids' => $tagIds,
         ];
+    }
+
+    private function deleteLocalPdfIfUnused(?string $pdfUrl): void
+    {
+        if ($pdfUrl === null || preg_match('~^/assets/pdfs/(?:[a-f0-9]{32}|[a-z0-9][a-z0-9-]{0,79}-[a-f0-9]{6})\.pdf$~', $pdfUrl) !== 1) {
+            return;
+        }
+
+        try {
+            $statement = $this->pdo->prepare('SELECT COUNT(*) FROM books WHERE pdf_url = :pdf_url');
+            $statement->execute(['pdf_url' => $pdfUrl]);
+            if ((int)$statement->fetchColumn() > 0) {
+                return;
+            }
+        } catch (Throwable $error) {
+            error_log('Could not check PDF usage before cleanup: ' . $error->getMessage());
+            return;
+        }
+
+        $filePath = __DIR__ . '/../../../public/assets/pdfs/' . basename($pdfUrl);
+        if (is_file($filePath) && !@unlink($filePath)) {
+            error_log('Could not delete unused PDF: ' . $filePath);
+        }
     }
 
     private function attachTags(array &$books): void

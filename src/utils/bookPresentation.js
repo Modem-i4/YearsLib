@@ -8,6 +8,8 @@ export function coverPalette(book) {
 export function externalPdfUrl(value) {
   if (!value) return null
 
+  if (/^\/assets\/pdfs\/(?:[a-f0-9]{32}|[a-z0-9][a-z0-9-]{0,79}-[a-f0-9]{6})\.pdf$/.test(value)) return value
+
   try {
     const url = new URL(value)
     return url.protocol === 'https:' ? url.href : null
@@ -20,7 +22,7 @@ export function externalViewer(value) {
   const url = externalPdfUrl(value)
   if (!url) return null
 
-  const parsed = new URL(url)
+  const parsed = new URL(url, window.location.origin)
   if (parsed.hostname === 'drive.google.com') {
     const fileMatch = parsed.pathname.match(/^\/file\/d\/([A-Za-z0-9_-]+)/)
     if (fileMatch) {
