@@ -16,8 +16,8 @@
       );
     } catch {}
   </script>
-  <link rel="stylesheet" href="/build/assets/library.css">
-  <script type="module" src="/build/assets/library.js"></script>
+  <link rel="stylesheet" href="<?= htmlspecialchars(versioned_asset('/build/assets/library.css'), ENT_QUOTES, 'UTF-8') ?>">
+  <script type="module" src="<?= htmlspecialchars(versioned_asset('/build/assets/library.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
 </head>
 <body>
   <div id="library-app"></div>
