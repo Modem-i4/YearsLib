@@ -15,6 +15,7 @@ const editorError = ref('')
 const coverBusy = ref(false)
 const coverPreview = ref(props.book?.cover_path ?? '')
 const fileInput = ref(null)
+const cameraInput = ref(null)
 const tags = ref([])
 const tagsOpen = ref(false)
 const placements = ref([])
@@ -452,8 +453,12 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
             <div class="admin-cover-preview" :class="`cover-${coverPalette(form)}`"><img v-if="coverPreview || form.cover_path" :src="coverPreview || form.cover_path" alt="Попередній перегляд обкладинки"><span v-else>{{ form.title.slice(0, 1) || 'К' }}</span></div>
             <div class="admin-cover-controls">
               <input ref="fileInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/avif" @change="uploadCover">
+              <input ref="cameraInput" class="visually-hidden" type="file" accept="image/*" capture="environment" @change="uploadCover">
               <div class="admin-cover-buttons">
                 <button class="admin-secondary-button" type="button" :disabled="coverBusy" @click="fileInput?.click()">{{ coverBusy ? 'Конвертація…' : 'Завантажити зображення' }}</button>
+                <button class="admin-camera-button" type="button" :disabled="coverBusy" aria-label="Зробити фото обкладинки" title="Зробити фото" @click="cameraInput?.click()">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.5-2h7l1.5 2h3v10H4z"/><circle cx="12" cy="13.5" r="3.25"/></svg>
+                </button>
                 <button v-if="coverPreview || form.cover_path" class="admin-remove-cover" type="button" :disabled="coverBusy" aria-label="Видалити обкладинку" title="Видалити обкладинку" @click="removeCover">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" /></svg>
                 </button>

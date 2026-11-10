@@ -1309,6 +1309,10 @@ textarea:focus-visible {
 .admin-cover-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .admin-cover-controls { display: grid; min-width: 0; max-width: 100%; justify-items: start; gap: 7px; }
 .admin-cover-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-camera-button { display: none; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: var(--surface); cursor: pointer; }
+.admin-camera-button:hover { border-color: var(--accent); color: var(--accent-hover); }
+.admin-camera-button:disabled { cursor: wait; opacity: .6; }
+.admin-camera-button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .admin-remove-cover { display: grid; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; border: 1px solid color-mix(in srgb, #d75949 55%, var(--line)); border-radius: 6px; color: #d75949; background: var(--surface); cursor: pointer; }
 .admin-remove-cover:hover { border-color: #d75949; background: color-mix(in srgb, #d75949 10%, var(--surface)); }
 .admin-remove-cover:disabled { cursor: wait; opacity: .6; }
@@ -1321,6 +1325,7 @@ textarea:focus-visible {
 .admin-field select { min-width: 0; max-width: 100%; box-sizing: border-box; }
 
 @media (max-width: 700px) {
+  .admin-camera-button { display: grid; }
   .admin-header,
   .admin-content { width: min(100% - 32px, 1120px); }
   .admin-content { padding-top: 25px; }
