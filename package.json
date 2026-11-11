@@ -8,6 +8,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "heic-to": "^1.6.7",
     "vue": "^3.5.0"
   },
   "devDependencies": {

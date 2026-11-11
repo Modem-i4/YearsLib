@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { coverPalette } from '../utils/bookPresentation.js'
+import { convertCoverToWebp } from '../utils/coverImage.js'
 
 const props = defineProps({
   book: { type: Object, default: null },
@@ -261,26 +262,6 @@ async function deleteTag(tag) {
   }
 }
 
-async function convertToWebp(file) {
-  if (file.size > 15 * 1024 * 1024) throw new Error('Вихідне зображення має бути меншим за 15 МБ.')
-  const image = await createImageBitmap(file)
-  const scale = Math.min(1, 1800 / Math.max(image.width, image.height))
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.max(1, Math.round(image.width * scale))
-  canvas.height = Math.max(1, Math.round(image.height * scale))
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('Браузер не зміг обробити зображення.')
-  context.drawImage(image, 0, 0, canvas.width, canvas.height)
-  image.close()
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) return reject(new Error('Браузер не зміг конвертувати зображення.'))
-      resolve(new File([blob], 'cover.webp', { type: 'image/webp' }))
-    }, 'image/webp', 0.86)
-  })
-}
-
 async function uploadCover(event) {
   const file = event.target.files?.[0]
   event.target.value = ''
@@ -289,7 +270,7 @@ async function uploadCover(event) {
   coverBusy.value = true
   editorError.value = ''
   try {
-    const webp = await convertToWebp(file)
+    const webp = await convertCoverToWebp(file)
     if (webp.size > 5 * 1024 * 1024) throw new Error('Після конвертації обкладинка має бути меншою за 5 МБ.')
     const body = new FormData()
     body.append('cover', webp)
@@ -489,7 +470,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
           <div class="admin-cover-field">
             <div class="admin-cover-preview" :class="`cover-${coverPalette(form)}`"><img v-if="coverPreview || form.cover_path" :src="coverPreview || form.cover_path" alt="Попередній перегляд обкладинки"><span v-else>{{ form.title.slice(0, 1) || 'К' }}</span></div>
             <div class="admin-cover-controls">
-              <input ref="fileInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/avif" @change="uploadCover">
+              <input ref="fileInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif" @change="uploadCover">
               <input ref="cameraInput" class="visually-hidden" type="file" accept="image/*" capture="environment" @change="uploadCover">
               <div class="admin-cover-buttons">
                 <button class="admin-secondary-button" type="button" :disabled="coverBusy" @click="fileInput?.click()">{{ coverBusy ? 'Конвертація…' : 'Завантажити зображення' }}</button>
