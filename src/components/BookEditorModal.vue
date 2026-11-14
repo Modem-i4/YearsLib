@@ -1,7 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { coverPalette } from '../utils/bookPresentation.js'
-import { convertCoverToWebp } from '../utils/coverImage.js'
 
 const props = defineProps({
   book: { type: Object, default: null },
@@ -270,14 +269,14 @@ async function uploadCover(event) {
   coverBusy.value = true
   editorError.value = ''
   try {
-    const webp = await convertCoverToWebp(file)
-    if (webp.size > 5 * 1024 * 1024) throw new Error('Після конвертації обкладинка має бути меншою за 5 МБ.')
+    if (file.size < 1) throw new Error('Вибране зображення порожнє.')
+    if (file.size > 25 * 1024 * 1024) throw new Error('Вихідне зображення має бути не більшим за 25 МБ.')
     const body = new FormData()
-    body.append('cover', webp)
+    body.append('cover', file)
     const result = await api('/api/admin/covers', { method: 'POST', body })
     if (coverPreview.value.startsWith('blob:')) URL.revokeObjectURL(coverPreview.value)
     form.value.cover_path = result.cover_path
-    coverPreview.value = URL.createObjectURL(webp)
+    coverPreview.value = result.cover_path
   } catch (error) {
     editorError.value = error.message || 'Не вдалося завантажити обкладинку.'
   } finally {
@@ -473,7 +472,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeTagsOnOut
               <input ref="fileInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.heic,.heif" @change="uploadCover">
               <input ref="cameraInput" class="visually-hidden" type="file" accept="image/*" capture="environment" @change="uploadCover">
               <div class="admin-cover-buttons">
-                <button class="admin-secondary-button" type="button" :disabled="coverBusy" @click="fileInput?.click()">{{ coverBusy ? 'Конвертація…' : 'Завантажити зображення' }}</button>
+                <button class="admin-secondary-button" type="button" :disabled="coverBusy" @click="fileInput?.click()">{{ coverBusy ? 'Завантаження…' : 'Завантажити зображення' }}</button>
                 <button class="admin-camera-button" type="button" :disabled="coverBusy" aria-label="Зробити фото обкладинки" title="Зробити фото" @click="cameraInput?.click()">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.5-2h7l1.5 2h3v10H4z"/><circle cx="12" cy="13.5" r="3.25"/></svg>
                 </button>

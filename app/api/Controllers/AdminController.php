@@ -57,18 +57,23 @@ class AdminController
         }
 
         $file = $_FILES['cover'];
-        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            throw new ApiException('Cover upload failed', 400);
+        $uploadError = $file['error'] ?? UPLOAD_ERR_NO_FILE;
+        if ($uploadError === UPLOAD_ERR_INI_SIZE || $uploadError === UPLOAD_ERR_FORM_SIZE) {
+            throw new ApiException('Вихідне зображення має бути не більшим за 25 МБ', 413);
         }
-        if (($file['size'] ?? 0) < 1 || $file['size'] > 5 * 1024 * 1024) {
-            throw new ApiException('WebP cover must be smaller than 5 MB', 400);
+        if ($uploadError !== UPLOAD_ERR_OK) {
+            throw new ApiException('Не вдалося завантажити зображення', 400);
+        }
+        if (($file['size'] ?? 0) < 1) {
+            throw new ApiException('Вибране зображення порожнє', 400);
+        }
+        if ($file['size'] > CoverImageConverter::MAX_SOURCE_SIZE) {
+            throw new ApiException('Вихідне зображення має бути не більшим за 25 МБ', 413);
         }
 
         $temporaryPath = $file['tmp_name'] ?? '';
-        $mime = (new finfo(FILEINFO_MIME_TYPE))->file($temporaryPath);
-        $imageInfo = @getimagesize($temporaryPath);
-        if ($mime !== 'image/webp' || $imageInfo === false || ($imageInfo['mime'] ?? '') !== 'image/webp') {
-            throw new ApiException('Cover must be converted to WebP before upload', 415);
+        if ($temporaryPath === '' || !is_uploaded_file($temporaryPath)) {
+            throw new ApiException('Не вдалося перевірити завантажене зображення', 400);
         }
 
         $directory = __DIR__ . '/../../../public/assets/covers';
@@ -77,8 +82,18 @@ class AdminController
         }
 
         $filename = bin2hex(random_bytes(16)) . '.webp';
-        if (!move_uploaded_file($temporaryPath, $directory . DIRECTORY_SEPARATOR . $filename)) {
-            throw new ApiException('Could not store uploaded cover', 500);
+        $destination = $directory . DIRECTORY_SEPARATOR . $filename;
+        $pendingPath = $destination . '.pending';
+        try {
+            CoverImageConverter::convertToWebp($temporaryPath, $pendingPath);
+            if (!rename($pendingPath, $destination)) {
+                throw new RuntimeException('Could not finalize converted cover');
+            }
+        } catch (Throwable $error) {
+            if (is_file($pendingPath)) {
+                @unlink($pendingPath);
+            }
+            throw $error;
         }
 
         return ['cover_path' => '/assets/covers/' . $filename];

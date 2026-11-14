@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../app/helpers.php';
 require_once __DIR__ . '/../app/Router.php';
+require_once __DIR__ . '/../app/services/CoverImageConverter.php';
 require_once __DIR__ . '/../app/api/db.php';
 require_once __DIR__ . '/../app/api/Controllers/BooksController.php';
 require_once __DIR__ . '/../app/api/Controllers/AdminController.php';

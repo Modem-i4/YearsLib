@@ -7,7 +7,8 @@ PHP обслуговує сторінки й API; Vue та Tailwind збираю
 
 ## Вимоги
 
-- PHP 8.1+ із увімкненим PDO MySQL
+- PHP 8.1+ із увімкненими PDO MySQL та Imagick
+- ImageMagick із кодеками JPEG, PNG, WebP, AVIF і HEIC/HEIF (libheif)
 - Node.js 18+
 - MySQL або MariaDB
 
@@ -19,6 +20,12 @@ npm run build
 ```
 
 Для автоматичної повторної збірки після змін фронтенду запустіть `npm run dev` в окремому терміналі.
+
+Перевірити серверну підтримку HEIC і WebP можна так:
+
+```powershell
+php -r "var_dump(class_exists('Imagick') && Imagick::queryFormats('HEIC') && Imagick::queryFormats('WEBP'));"
+```
 
 Створіть базу `years_lib` у MySQL, налаштуйте `.env` і запустіть PHP.
 
@@ -34,7 +41,7 @@ npm run build
 - `PUT /api/books/{id}` повністю оновлює запис після входу адміністратора.
 - `DELETE /api/books/{id}` видаляє книгу разом з усією історією її видач після входу адміністратора.
 - `POST /api/admin/login`, `GET /api/admin/session`, `POST /api/admin/logout` керують адмін-сесією.
-- `POST /api/admin/covers` приймає перевірену WebP-обкладинку для поточної адмін-сесії.
+- `POST /api/admin/covers` приймає JPEG, PNG, WebP, AVIF, HEIC або HEIF до 25 МБ для поточної адмін-сесії та конвертує його у WebP на сервері.
 - `POST /api/admin/pdfs` приймає перевірений PDF розміром до 35 МБ для поточної адмін-сесії.
 - `GET/POST/PUT/DELETE /api/admin/placements` керують довідником розміщень літератури (для зміни й видалення в URL додається `{id}`).
 - `GET /api/admin/books/{id}/loans` повертає статистику та історію видач книги.
@@ -56,8 +63,10 @@ HTTPS-посиланням або шляхом до PDF, завантажено�
 MySQL-клієнті. Подальші міграції додаються в кінець цього файлу з наступним номером.
 
 Зображення обкладинки у JPEG, PNG, WebP, AVIF, HEIC або HEIF (зокрема фото з iPhone)
-конвертується браузером у WebP перед завантаженням; сервер перевіряє MIME, розмір і формат та
-зберігає його в `public/assets/covers`.
+завантажується в оригінальному форматі. Сервер перевіряє сигнатуру й розміри, застосовує EXIF-орієнтацію,
+зменшує довшу сторону до 1800 px, видаляє метадані, конвертує у WebP та зберігає результат у
+`public/assets/covers`. Для PHP мають бути встановлені Imagick та ImageMagick з підтримкою libheif;
+`upload_max_filesize` має бути не менше `26M`, а `post_max_size` — не менше `27M`.
 PDF-файли перевіряються за MIME, сигнатурою та розміром і зберігаються в `public/assets/pdfs`.
 Ім'я файлу формується з транслітерованої назви книги та короткого випадкового суфікса, наприклад
 `ukrainska-mova-5-klas-a1b2c3.pdf`. Для підручника з указаним класом клас також додається перед суфіксом.
